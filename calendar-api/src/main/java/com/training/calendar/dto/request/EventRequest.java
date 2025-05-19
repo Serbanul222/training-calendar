@@ -1,3 +1,4 @@
+// src/main/java/com/training/calendar/dto/request/EventRequest.java
 package com.training.calendar.dto.request;
 
 import jakarta.validation.constraints.Min;
@@ -9,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @Builder
@@ -17,6 +19,12 @@ import java.time.LocalDate;
 public class EventRequest {
     @NotNull(message = "Event date is required")
     private LocalDate eventDate;
+
+    @NotNull(message = "Start time is required")
+    private LocalTime startTime;
+
+    @NotNull(message = "End time is required")
+    private LocalTime endTime;
 
     @NotBlank(message = "Category ID is required")
     private String categoryId;

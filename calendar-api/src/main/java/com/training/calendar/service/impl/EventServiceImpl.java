@@ -5,6 +5,7 @@ import com.training.calendar.dto.response.EventResponse;
 import com.training.calendar.dto.response.ParticipantResponse;
 import com.training.calendar.exception.CategoryNotFoundException;
 import com.training.calendar.exception.EventNotFoundException;
+import com.training.calendar.exception.TimeConflictException;
 import com.training.calendar.model.Event;
 import com.training.calendar.model.Participant;
 import com.training.calendar.repository.CategoryRepository;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,6 +45,14 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<EventResponse> getEventsByDay(LocalDate date) {
+        return eventRepository.findByEventDateOrderByStartTime(date).stream()
+                .map(this::mapToEventResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public EventResponse getEventById(String id) throws EventNotFoundException {
         return eventRepository.findById(id)
                 .map(this::mapToEventResponse)
@@ -57,8 +67,21 @@ public class EventServiceImpl implements EventService {
             throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
         }
 
+        // Validate times
+        if (eventRequest.getEndTime().isBefore(eventRequest.getStartTime())) {
+            throw new IllegalArgumentException("End time must be after start time");
+        }
+
+        // Check for time conflicts
+        if (hasTimeConflict(eventRequest.getEventDate(), eventRequest.getStartTime(),
+                eventRequest.getEndTime(), null)) {
+            throw new TimeConflictException("Event time conflicts with an existing event");
+        }
+
         Event event = new Event();
         event.setEventDate(eventRequest.getEventDate());
+        event.setStartTime(eventRequest.getStartTime());
+        event.setEndTime(eventRequest.getEndTime());
         event.setCategoryId(eventRequest.getCategoryId());
         event.setLocation(eventRequest.getLocation());
         event.setMaxParticipants(eventRequest.getMaxParticipants());
@@ -79,8 +102,21 @@ public class EventServiceImpl implements EventService {
             throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
         }
 
+        // Validate times
+        if (eventRequest.getEndTime().isBefore(eventRequest.getStartTime())) {
+            throw new IllegalArgumentException("End time must be after start time");
+        }
+
+        // Check for time conflicts (excluding this event)
+        if (hasTimeConflict(eventRequest.getEventDate(), eventRequest.getStartTime(),
+                eventRequest.getEndTime(), id)) {
+            throw new TimeConflictException("Event time conflicts with an existing event");
+        }
+
         // Update event properties
         event.setEventDate(eventRequest.getEventDate());
+        event.setStartTime(eventRequest.getStartTime());
+        event.setEndTime(eventRequest.getEndTime());
         event.setCategoryId(eventRequest.getCategoryId());
         event.setLocation(eventRequest.getLocation());
         event.setMaxParticipants(eventRequest.getMaxParticipants());
@@ -124,6 +160,21 @@ public class EventServiceImpl implements EventService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasTimeConflict(LocalDate eventDate, LocalTime startTime, LocalTime endTime, String excludeEventId) {
+        List<Event> overlappingEvents = eventRepository.findOverlappingEvents(eventDate, startTime, endTime);
+
+        // If we're updating an existing event, exclude it from the conflict check
+        if (excludeEventId != null) {
+            overlappingEvents = overlappingEvents.stream()
+                    .filter(event -> !event.getId().equals(excludeEventId))
+                    .collect(Collectors.toList());
+        }
+
+        return !overlappingEvents.isEmpty();
+    }
+
     // Helper method to map Event entity to EventResponse DTO
     private EventResponse mapToEventResponse(Event event) {
         List<ParticipantResponse> participants = event.getParticipants().stream()
@@ -133,6 +184,8 @@ public class EventServiceImpl implements EventService {
         return EventResponse.builder()
                 .id(event.getId())
                 .eventDate(event.getEventDate())
+                .startTime(event.getStartTime())
+                .endTime(event.getEndTime())
                 .categoryId(event.getCategoryId())
                 .location(event.getLocation())
                 .maxParticipants(event.getMaxParticipants())

@@ -5,6 +5,7 @@ import com.training.calendar.dto.response.EventResponse;
 import com.training.calendar.exception.EventNotFoundException;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface EventService {
@@ -22,6 +23,13 @@ public interface EventService {
      * @return List of events in the specified month
      */
     List<EventResponse> getEventsByMonth(int year, int month);
+
+    /**
+     * Get events for a specific day
+     * @param date The day to get events for
+     * @return List of events on the specified day, ordered by start time
+     */
+    List<EventResponse> getEventsByDay(LocalDate date);
 
     /**
      * Get event by ID
@@ -76,4 +84,14 @@ public interface EventService {
      * @return List of events in the date range
      */
     List<EventResponse> getEventsByDateRange(LocalDate startDate, LocalDate endDate);
+
+    /**
+     * Check for time conflicts with existing events
+     * @param eventDate The date of the event
+     * @param startTime The start time
+     * @param endTime The end time
+     * @param excludeEventId Optional event ID to exclude from conflict check (for updates)
+     * @return true if there are time conflicts
+     */
+    boolean hasTimeConflict(LocalDate eventDate, LocalTime startTime, LocalTime endTime, String excludeEventId);
 }

@@ -11,6 +11,12 @@
       @update:is-admin="updateAdminMode"
     />
     
+    <!-- View Type Selector -->
+    <CalendarViewSwitcher
+      :current-view="currentView"
+      @update:view="setView"
+    />
+    
     <!-- Category legend -->
     <CategoryLegend :categories="Object.values(TRAINING_CATEGORIES)" />
     
@@ -65,6 +71,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid'; // Import time grid plugin
 import interactionPlugin from '@fullcalendar/interaction';
 import roLocale from '@fullcalendar/core/locales/ro';
 
@@ -77,22 +84,29 @@ import CategoryLegend from './CategoryLegend.vue';
 import EventModal from './EventModal.vue';
 import RegistrationModal from './RegistrationModal.vue';
 import ConfirmationModal from './modals/ConfirmationModal.vue';
+import CalendarViewSwitcher from './CalendarViewSwitcher.vue';
 
 // Import composables and utils
 import useCalendarEvents from '../composables/useCalendarEvents';
 import useCalendarNavigation from '../composables/useCalendarNavigation';
-import { createCalendarOptions, defaultEventContentRenderer } from '../utils/calendarConfig';
 import { markRaw } from 'vue';
 
 // Setup calendar and plugins
 const fullCalendar = ref(null);
-const plugins = markRaw([dayGridPlugin, interactionPlugin]);
+// Make sure to import and register all required plugins
+const plugins = markRaw([
+  dayGridPlugin, 
+  timeGridPlugin, 
+  interactionPlugin
+]);
+const currentView = ref('dayGridMonth'); // Default view is month
 
 // Setup composables
 const { 
   events, loading, error, 
-  loadEventsByMonth, deleteEvent, 
-  submitEvent, registerForEvent 
+  loadEventsByMonth, loadEventsByDay,
+  deleteEvent, submitEvent, 
+  registerForEvent 
 } = useCalendarEvents();
 
 const {
@@ -115,10 +129,12 @@ const eventForm = reactive({
   id: '', 
   category: 'CONSULTANTA', 
   location: '',
+  date: '',
+  startTime: '09:00', // Default start time
+  endTime: '17:00',   // Default end time
   maxParticipants: 10, 
   description: '', 
-  participants: [], 
-  date: ''
+  participants: []
 });
 
 const selectedEventSnapshot = reactive({
@@ -142,25 +158,143 @@ const confirmationModalConfig = reactive({
   }
 });
 
+// Define the event content renderer
+function defaultEventContentRenderer(eventInfo) {
+  try {
+    const category = eventInfo.event.extendedProps?.category || '';
+    const location = eventInfo.event.extendedProps?.location || '';
+    const participants = eventInfo.event.extendedProps?.participants || [];
+    const maxParticipants = eventInfo.event.extendedProps?.maxParticipants || 0;
+    
+    // Create participant info text
+    const participantInfo = `${participants.length}/${maxParticipants}`;
+    
+    // Build HTML for the event, with appropriate classes for the category
+    return {
+      html: `
+        <div class="fc-event-main-content ${category}">
+          <div class="fc-event-title">${eventInfo.event.title}</div>
+          <div class="fc-event-location">${location}</div>
+          <div class="fc-event-participants">${participantInfo}</div>
+        </div>
+      `
+    };
+  } catch (error) {
+    console.error('Error rendering event content:', error);
+    // Fallback rendering
+    return {
+      html: `<div class="fc-event-main-content"><div class="fc-event-title">${eventInfo.event.title}</div></div>`
+    };
+  }
+}
+
 // Calendar options
-const calendarOptions = computed(() => createCalendarOptions({
-  plugins,
-  roLocale,
-  events,
-  isAdmin: isAdmin.value,
-  currentYear: currentYear.value,
-  selectedMonth: selectedMonth.value,
-  onEventClick: handleEventClick,
-  onDateClick: handleDateClick,
-  onDatesSet: handleDatesSet,
-  renderEventContent: defaultEventContentRenderer
-}));
+const calendarOptions = computed(() => {
+  // Start with a clean options object
+  return {
+    plugins,
+    initialView: 'dayGridMonth', // Always start with month view for stability
+    locale: roLocale,
+    firstDay: 1, // Monday
+    headerToolbar: false, // We'll create our own header
+    events,
+    selectable: isAdmin.value,
+    editable: isAdmin.value,
+    eventClick: handleEventClick,
+    dateClick: handleDateClick,
+    eventContent: defaultEventContentRenderer,
+    datesSet: handleDatesSet,
+    height: 'auto', // Dynamically adjust height based on content
+    displayEventEnd: false, // Since all events are all-day by default
+    dayMaxEventRows: true, // Better performance for event display
+    initialDate: new Date(currentYear.value, selectedMonth.value, 1),
+    
+    // Time grid specific options
+    slotMinTime: '08:00:00', 
+    slotMaxTime: '20:00:00',
+    slotDuration: '00:30:00',
+    allDaySlot: true,
+    
+    // Configure each view specifically
+    views: {
+      dayGridMonth: {
+        // Month view configuration
+        dayMaxEventRows: 4
+      },
+      timeGridWeek: {
+        // Week view configuration
+        slotLabelFormat: {
+          hour: 'numeric',
+          minute: '2-digit',
+          omitZeroMinute: false,
+          hour12: false
+        }
+      },
+      timeGridDay: {
+        // Day view configuration
+        dayHeaderFormat: { 
+          weekday: 'long', 
+          month: 'long', 
+          day: 'numeric' 
+        }
+      }
+    }
+  };
+});
+
+// Set the calendar view type
+function setView(viewType) {
+  // Update the view state
+  currentView.value = viewType;
+  
+  // Safely access the calendar API with proper error handling
+  try {
+    if (fullCalendar.value && fullCalendar.value.getApi) {
+      // Get the API
+      const api = fullCalendar.value.getApi();
+      
+      // Make sure the view type exists and is properly registered
+      const availableViews = ['dayGridMonth', 'timeGridWeek', 'timeGridDay'];
+      
+      if (availableViews.includes(viewType)) {
+        console.log(`Changing view to: ${viewType}`);
+        // Use a timeout to ensure the view change happens after the current rendering cycle
+        setTimeout(() => {
+          api.changeView(viewType);
+          console.log(`View successfully changed to: ${viewType}`);
+        }, 0);
+      } else {
+        console.warn(`Invalid view type: ${viewType}`);
+      }
+    } else {
+      console.warn('FullCalendar component not fully mounted yet');
+    }
+  } catch (error) {
+    console.error('Error changing calendar view:', error);
+  }
+}
+
+// Watch for view changes to load appropriate data
+watch(currentView, async (newView) => {
+  if (newView.includes('Day')) {
+    // For day view, load events for the specific day
+    const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
+    const formattedDate = selectedDate.toISOString().split('T')[0];
+    await loadEventsByDay(formattedDate);
+  } else {
+    // For month/week view, load events for the month
+    await loadEventsByMonth(currentYear.value, selectedMonth.value);
+  }
+  
+  forceCalendarRefresh();
+});
 
 // Watch month/year changes
 watch([currentYear, selectedMonth], async ([newYear, newMonth]) => {
   console.log(`Month/year changed to ${newMonth+1}/${newYear}`);
-  await loadEventsByMonth(newYear, newMonth);
-  // Let Vue's reactivity handle the update
+  if (currentView.value === 'dayGridMonth') {
+    await loadEventsByMonth(newYear, newMonth);
+  }
 });
 
 // Update admin mode
@@ -173,6 +307,8 @@ function updateAdminMode(value) {
 // Handle clicking on an event
 function handleEventClick(info) {
   const startDate = info.event.start ? new Date(info.event.start) : new Date();
+  const startTime = info.event.start ? new Date(info.event.start).toTimeString().substring(0, 5) : '09:00';
+  const endTime = info.event.end ? new Date(info.event.end).toTimeString().substring(0, 5) : '17:00';
   
   const eventData = {
     id: info.event.id,
@@ -184,7 +320,9 @@ function handleEventClick(info) {
       location: info.event.extendedProps?.location || '',
       maxParticipants: info.event.extendedProps?.maxParticipants || 0,
       description: info.event.extendedProps?.description || '',
-      participants: info.event.extendedProps?.participants ? [...info.event.extendedProps.participants] : []
+      participants: info.event.extendedProps?.participants ? [...info.event.extendedProps.participants] : [],
+      startTime: info.event.extendedProps?.startTime || startTime,
+      endTime: info.event.extendedProps?.endTime || endTime
     }
   };
   
@@ -219,15 +357,43 @@ function handleDateClick(info) {
   isEditMode.value = false;
   selectedDate.value = info.dateStr;
   
-  Object.assign(eventForm, {
-    id: '', 
-    category: 'CONSULTANTA', 
-    location: '',
-    maxParticipants: 10, 
-    description: '', 
-    participants: [], 
-    date: info.dateStr
-  });
+  // Get time information if available
+  let startTime = '09:00';
+  if (info.view.type.includes('timeGrid') && info.date) {
+    // If clicked in timeGrid view, use that time as start time
+    const clickedDate = new Date(info.date);
+    const hours = clickedDate.getHours().toString().padStart(2, '0');
+    const minutes = (Math.floor(clickedDate.getMinutes() / 15) * 15).toString().padStart(2, '0');
+    startTime = `${hours}:${minutes}`;
+    
+    // Calculate end time 1 hour later
+    const endHour = (clickedDate.getHours() + 1) % 24;
+    const endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
+    
+    Object.assign(eventForm, {
+      id: '', 
+      category: 'CONSULTANTA', 
+      location: '',
+      maxParticipants: 10, 
+      description: '', 
+      participants: [], 
+      date: info.dateStr,
+      startTime,
+      endTime
+    });
+  } else {
+    Object.assign(eventForm, {
+      id: '', 
+      category: 'CONSULTANTA', 
+      location: '',
+      maxParticipants: 10, 
+      description: '', 
+      participants: [], 
+      date: info.dateStr,
+      startTime: '09:00',
+      endTime: '17:00'
+    });
+  }
   
   showEventForm.value = true;
 }
@@ -243,7 +409,9 @@ function prepareEditEvent(eventData, info) {
     maxParticipants: eventData.extendedProps.maxParticipants,
     description: eventData.extendedProps.description,
     participants: eventData.extendedProps.participants,
-    date: info.event.startStr
+    date: eventData.start,
+    startTime: eventData.extendedProps.startTime,
+    endTime: eventData.extendedProps.endTime
   });
   
   showEventForm.value = true;
@@ -266,8 +434,14 @@ function confirmDeleteEvent(eventId) {
     
     if (success) {
       console.log('Event deleted, reloading calendar data');
-      // Just reload the events - let Vue reactivity handle the rest
-      await loadEventsByMonth(currentYear.value, selectedMonth.value);
+      // Reload appropriate data based on current view
+      if (currentView.value.includes('Day')) {
+        const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
+        const formattedDate = selectedDate.toISOString().split('T')[0];
+        await loadEventsByDay(formattedDate);
+      } else {
+        await loadEventsByMonth(currentYear.value, selectedMonth.value);
+      }
     }
   };
   confirmationModalConfig.onCancel = () => {
@@ -280,7 +454,15 @@ async function handleEventSubmit(formData) {
   const success = await submitEvent(formData, isEditMode.value);
   if (success) {
     closeEventForm();
-    await loadEventsByMonth(currentYear.value, selectedMonth.value);
+    
+    // Reload appropriate data based on current view
+    if (currentView.value.includes('Day')) {
+      const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      await loadEventsByDay(formattedDate);
+    } else {
+      await loadEventsByMonth(currentYear.value, selectedMonth.value);
+    }
   }
 }
 
@@ -298,8 +480,15 @@ async function handleRegistrationSubmit(formData) {
     showConfirmationModal.value = false;
     if (result.success) {
       closeRegistrationForm();
-      // Just reload the events - let Vue reactivity handle the rest
-      await loadEventsByMonth(currentYear.value, selectedMonth.value);
+      
+      // Reload appropriate data based on current view
+      if (currentView.value.includes('Day')) {
+        const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
+        const formattedDate = selectedDate.toISOString().split('T')[0];
+        await loadEventsByDay(formattedDate);
+      } else {
+        await loadEventsByMonth(currentYear.value, selectedMonth.value);
+      }
     }
   };
 }
@@ -314,7 +503,9 @@ function closeEventForm() {
     maxParticipants: 10, 
     description: '', 
     participants: [], 
-    date: '' 
+    date: '',
+    startTime: '09:00',
+    endTime: '17:00'
   });
 }
 
@@ -332,13 +523,45 @@ function closeRegistrationForm() {
 // Load events on mount
 onMounted(async () => {
   console.log('TrainingCalendar component mounted');
+  
+  // Load initial events
   await loadEventsByMonth(currentYear.value, selectedMonth.value);
+  
+  // Wait a short time to ensure FullCalendar is fully rendered
+  setTimeout(() => {
+    try {
+      if (fullCalendar.value && fullCalendar.value.getApi) {
+        console.log('FullCalendar API is available');
+        
+        // Initialize with the current view if needed
+        const api = fullCalendar.value.getApi();
+        
+        // Set the initial view after component has fully mounted
+        // Makes sure view-specific plugins are properly loaded
+        api.changeView(currentView.value);
+        
+        console.log(`Calendar view initialized to: ${currentView.value}`);
+      } else {
+        console.warn('FullCalendar API not available after mounting');
+      }
+    } catch (error) {
+      console.error('Error initializing calendar view:', error);
+    }
+  }, 300); // Increased delay to ensure full initialization
 });
 
 // Set up auto-refresh interval with less frequent updates
 const refreshInterval = setInterval(async () => {
   console.log('Periodic events refresh');
-  await loadEventsByMonth(currentYear.value, selectedMonth.value);
+  
+  // Reload appropriate data based on current view
+  if (currentView.value.includes('Day')) {
+    const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
+    const formattedDate = selectedDate.toISOString().split('T')[0];
+    await loadEventsByDay(formattedDate);
+  } else {
+    await loadEventsByMonth(currentYear.value, selectedMonth.value);
+  }
 }, 60000); // Every 60 seconds
 
 // Clean up interval on component unmount
@@ -391,5 +614,41 @@ onUnmounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+:deep(.fc-event-time) {
+  font-size: 0.85em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:deep(.fc-timegrid-event .fc-event-main) {
+  padding: 2px 4px;
+}
+
+:deep(.fc-timegrid-slots tr) {
+  line-height: 1.75; /* Makes the time slots a bit taller */
+}
+
+:deep(.fc-timegrid-slot-label) {
+  font-size: 0.85em;
+}
+
+:deep(.fc-col-header-cell) {
+  font-weight: bold;
+}
+
+/* Category colors in time grid */
+:deep(.CONSULTANTA) {
+  border-left: 4px solid #4a86e8 !important;
+}
+
+:deep(.OPTOMETRIE) {
+  border-left: 4px solid #9900ff !important;
+}
+
+:deep(.PRODUSE_HOYA) {
+  border-left: 4px solid #f1c232 !important;
 }
 </style>

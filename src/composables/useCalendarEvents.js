@@ -1,141 +1,222 @@
 // src/composables/useCalendarEvents.js
-import { ref } from 'vue';
+
+import { ref, reactive } from 'vue';
 import { useEventStore } from '../store/eventStore';
 
+/**
+ * Composable for handling calendar events and their operations
+ * @returns {Object} Event operations and state
+ */
 export default function useCalendarEvents() {
-  const eventStore = useEventStore();
+  // State
+  const events = reactive([]);
   const loading = ref(false);
-  const error = ref(null);
+  const error = ref('');
+  
+  // Get event store
+  const eventStore = useEventStore();
+  const checkTimeConflict = eventStore.checkTimeConflict;
+
   
   // Load events for a specific month and year
- async function loadEventsByMonth(year, month) {
-  loading.value = true;
-  error.value = null;
-  
-  try {
-    console.log(`Loading events for year: ${year}, month: ${month + 1}`);
-    const success = await eventStore.loadEvents(year, month + 1);
-    console.log("Events loaded successfully:", success);
-    console.log("Current events in store:", eventStore.events.length, eventStore.events);
-    return success;
-  } catch (err) {
-    error.value = 'Failed to load events. Please try again.';
-    console.error('Error loading events:', err);
-    return false;
-  } finally {
-    loading.value = false;
-  }
-}
-
-  // Delete an event
- // In useCalendarEvents.js
-async function deleteEvent(eventId) {
-  loading.value = true;
-  error.value = null;
-  
-  try {
-    console.log('Deleting event ID:', eventId);
-    const success = await eventStore.deleteEvent(eventId);
-    
-    if (success) {
-      console.log('Event successfully deleted from API');
-      // Force a calendar refresh here
-      return true;
-    } else {
-      error.value = 'Failed to delete event';
-      console.error('Failed to delete event');
-      return false;
-    }
-  } catch (err) {
-    error.value = 'Failed to delete event';
-    console.error('Error deleting event:', err);
-    return false;
-  } finally {
-    loading.value = false;
-  }
-}
-
-  // Event form submission handling
-  async function submitEvent(formData, isEditMode) {
+  const loadEventsByMonth = async (year, month) => {
     loading.value = true;
-    error.value = null;
+    error.value = '';
     
     try {
-      // Convert from frontend to backend field names
-      const eventData = {
-        id: formData.id,
-        eventDate: formData.date, // Convert 'date' to 'eventDate'
-        categoryId: formData.category, // Convert 'category' to 'categoryId'
-        location: formData.location,
-        maxParticipants: formData.maxParticipants,
-        description: formData.description,
-        participants: formData.participants || []
-      };
+      console.log(`Loading events for year: ${year}, month: ${month}`);
+      const success = await eventStore.loadEvents(year, month);
+      console.log(`Events loaded successfully: ${success}`);
       
-      let result;
-      if (isEditMode) {
-        // Update existing event
-        result = await eventStore.updateEvent(eventData);
-      } else {
-        // Create new event
-        result = await eventStore.addEvent(eventData);
-      }
+      // Copy events from store to local reactive state
+      const storeEvents = eventStore.events;
+      console.log(`Current events in store: ${storeEvents.length}`);
+      console.log(storeEvents);
       
-      if (result) {
-        console.log('Event saved successfully');
-        return true;
-      } else {
-        error.value = 'Failed to save event';
-        console.error('Failed to save event');
-        return false;
-      }
+      // Clear events array and add new events
+      events.length = 0;
+      storeEvents.forEach(event => events.push(event));
+      
+      return success;
     } catch (err) {
-      error.value = 'Failed to save event';
-      console.error('Error saving event:', err);
+      console.error('Error loading events:', err);
+      error.value = 'Failed to load events: ' + err.message;
       return false;
     } finally {
       loading.value = false;
     }
-  }
-
-  // Registration form submission handling
-  async function registerForEvent(formData) {
+  };
+  
+  // Load events for a specific day
+  const loadEventsByDay = async (date) => {
     loading.value = true;
-    error.value = null;
+    error.value = '';
     
     try {
-      // Create a participant request object for the API
-      const participantRequest = {
+      console.log(`Loading events for date: ${date}`);
+      const success = await eventStore.loadEventsByDay(date);
+      
+      // Copy events from store to local reactive state
+      const storeEvents = eventStore.events;
+      
+      // Clear events array and add new events
+      events.length = 0;
+      storeEvents.forEach(event => events.push(event));
+      
+      return success;
+    } catch (err) {
+      console.error('Error loading events:', err);
+      error.value = 'Failed to load events: ' + err.message;
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  };
+  
+  // Delete an event
+  const deleteEvent = async (eventId) => {
+    loading.value = true;
+    error.value = '';
+    
+    try {
+      const success = await eventStore.deleteEvent(eventId);
+      if (success) {
+        // Remove from local events array
+        const index = events.findIndex(e => e.id === eventId);
+        if (index !== -1) {
+          events.splice(index, 1);
+        }
+      }
+      return success;
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      error.value = 'Failed to delete event: ' + err.message;
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  };
+  
+  // Submit event (create or update)
+  const submitEvent = async (formData, isEditMode) => {
+    loading.value = true;
+    error.value = '';
+    
+    try {
+      let result;
+      
+      if (isEditMode) {
+        result = await eventStore.updateEvent(formData);
+      } else {
+        result = await eventStore.addEvent(formData);
+      }
+      
+      if (result) {
+        // Make sure the successful result is in our events array
+        if (isEditMode) {
+          // Update existing event
+          const index = events.findIndex(e => e.id === formData.id);
+          if (index !== -1) {
+            events[index] = result;
+          }
+        } else {
+          // Add new event
+          events.push(result);
+        }
+      }
+      
+      return !!result;
+    } catch (err) {
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} event:`, err);
+      error.value = `Failed to ${isEditMode ? 'update' : 'create'} event: ` + err.message;
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  };
+  
+  // Register for an event
+  const registerForEvent = async (formData) => {
+    loading.value = true;
+    error.value = '';
+    
+    try {
+      // Create participant object
+      const participant = {
+        id: Date.now().toString(),
         participantEmail: formData.participantEmail,
-        participantName: formData.participantName,
+        participantName: formData.participantName || formData.participantEmail.split('@')[0],
         managerEmail: formData.managerEmail,
         location: formData.location
       };
       
-      const success = await eventStore.addParticipant(formData.eventId, participantRequest);
+      const eventId = formData.eventId;
+      
+      // Find the event to check its capacity
+      const event = events.find(e => e.id === eventId);
+      if (!event) {
+        return {
+          success: false,
+          message: 'Event not found'
+        };
+      }
+      
+      // Check if event is full
+      const participants = event.extendedProps?.participants || [];
+      const maxParticipants = event.extendedProps?.maxParticipants || 0;
+      
+      if (participants.length >= maxParticipants) {
+        return {
+          success: false,
+          message: 'This event is already full. Please select another event.'
+        };
+      }
+      
+      // Add participant
+      const success = await eventStore.addParticipant(eventId, participant);
       
       if (success) {
-        return { success: true, message: 'Registration successful!' };
+        // Update the local event object
+        const updatedEvent = eventStore.events.find(e => e.id === eventId);
+        if (updatedEvent) {
+          const index = events.findIndex(e => e.id === eventId);
+          if (index !== -1) {
+            events[index] = updatedEvent;
+          }
+        }
+        
+        return {
+          success: true,
+          message: 'Registration successful! You are now registered for this event.'
+        };
       } else {
-        error.value = 'Registration failed. The event might be full.';
-        return { success: false, message: 'Registration failed. The event might be full.' };
+        return {
+          success: false,
+          message: 'Registration failed. The event might be full or an error occurred.'
+        };
       }
     } catch (err) {
-      error.value = 'Registration failed';
-      console.error('Error during registration:', err);
-      return { success: false, message: 'Registration failed. Please try again.' };
+      console.error('Error registering for event:', err);
+      error.value = 'Failed to register for event: ' + err.message;
+      
+      return {
+        success: false,
+        message: 'An error occurred during registration: ' + err.message
+      };
     } finally {
       loading.value = false;
     }
-  }
-
+  };
+  
   return {
-    events: eventStore.events,
+    events,
     loading,
     error,
     loadEventsByMonth,
+    loadEventsByDay,
     deleteEvent,
     submitEvent,
-    registerForEvent
+    registerForEvent,
+    checkTimeConflict 
   };
 }

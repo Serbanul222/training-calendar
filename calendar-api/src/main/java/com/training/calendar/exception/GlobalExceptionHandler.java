@@ -35,6 +35,26 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(apiError, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleIllegalArgumentException(IllegalArgumentException ex) {
+        ApiError apiError = new ApiError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(TimeConflictException.class)
+    public ResponseEntity<ApiError> handleTimeConflictException(TimeConflictException ex) {
+        ApiError apiError = new ApiError(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(apiError, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(ParticipantNotFoundException.class)
     public ResponseEntity<ApiError> handleParticipantNotFoundException(ParticipantNotFoundException ex) {
         ApiError apiError = new ApiError(

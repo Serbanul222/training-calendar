@@ -9,6 +9,7 @@
       <div class="modal-body">
         <div class="event-details">
           <p><strong>Date:</strong> {{ formatEventDate }}</p>
+          <p><strong>Time:</strong> {{ formatEventTime }}</p>
           <p><strong>Event:</strong> {{ eventTitle }}</p>
           <p><strong>Available Spots:</strong> {{ availableSpots }}</p>
           <p v-if="eventDescription"><strong>Description:</strong> {{ eventDescription }}</p>
@@ -55,11 +56,15 @@
             >
           </div>
           
+          <div v-if="error" class="error-message">
+            {{ error }}
+          </div>
+          
           <div class="form-actions">
             <button 
               type="submit" 
               class="btn-submit" 
-              :disabled="isEventFull"
+              :disabled="loading || isEventFull"
             >
               Register
             </button>
@@ -93,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, reactive } from 'vue';
 import { format, parseISO } from 'date-fns';
 import { ro } from 'date-fns/locale';
 
@@ -114,12 +119,18 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'close']);
 
-// Extract event data once on mount to prevent reactivity issues
+// Local state
+const loading = ref(false);
+const error = ref(null);
+
+// Extract event data
 const eventId = ref('');
 const eventDate = ref('');
 const eventTitle = ref('');
 const eventDescription = ref('');
 const eventMaxParticipants = ref(0);
+const eventStartTime = ref('');
+const eventEndTime = ref('');
 const participantsList = ref([]);
 
 // Extract event data to local refs
@@ -131,11 +142,13 @@ onMounted(() => {
     eventDescription.value = props.event?.extendedProps?.description || '';
     eventMaxParticipants.value = props.event?.extendedProps?.maxParticipants || 0;
     participantsList.value = props.event?.extendedProps?.participants || [];
+    eventStartTime.value = props.event?.extendedProps?.startTime || '09:00';
+    eventEndTime.value = props.event?.extendedProps?.endTime || '17:00';
   }
 });
 
 // Registration form data
-const formData = ref({
+const formData = reactive({
   participantEmail: '',
   participantName: '',
   managerEmail: '',
@@ -157,6 +170,13 @@ const availableSpots = computed(() => {
 
 const isEventFull = computed(() => {
   return participantsCount.value >= eventMaxParticipants.value;
+});
+
+// Format event time
+const formatEventTime = computed(() => {
+  if (!eventStartTime.value || !eventEndTime.value) return '';
+  
+  return `${eventStartTime.value} - ${eventEndTime.value}`;
 });
 
 // Safely format the event date, handling different date formats
@@ -206,18 +226,33 @@ function participantName(participant) {
 function submitForm() {
   if (isEventFull.value) return;
   
-  emit('submit', {
-    ...formData.value,
-    eventId: eventId.value
-  });
+  loading.value = true;
+  error.value = null;
   
-  // Reset form after submission
-  formData.value = {
-    participantEmail: '',
-    participantName: '',
-    managerEmail: '',
-    location: ''
-  };
+  try {
+    // Validate form
+    if (!formData.participantEmail || !formData.managerEmail || !formData.location) {
+      error.value = 'Please fill in all required fields';
+      loading.value = false;
+      return;
+    }
+    
+    emit('submit', {
+      ...formData,
+      eventId: eventId.value
+    });
+    
+    // Reset form after submission
+    formData.participantEmail = '';
+    formData.participantName = '';
+    formData.managerEmail = '';
+    formData.location = '';
+  } catch (err) {
+    error.value = 'Registration failed. Please try again.';
+    console.error(err);
+  } finally {
+    loading.value = false;
+  }
 }
 
 // Handle modal close
@@ -331,6 +366,10 @@ function handleClose() {
 .error-message {
   color: #dc3545;
   margin-top: 1rem;
+  background-color: #fff5f5;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border-left: 3px solid #dc3545;
 }
 
 .participant-list {

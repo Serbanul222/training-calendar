@@ -1,3 +1,4 @@
+// src/main/java/com/training/calendar/dto/response/EventResponse.java
 package com.training.calendar.dto.response;
 
 import lombok.AllArgsConstructor;
@@ -6,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -15,6 +17,8 @@ import java.util.List;
 public class EventResponse {
     private String id;
     private LocalDate eventDate;
+    private LocalTime startTime;
+    private LocalTime endTime;
     private String categoryId;
     private String location;
     private int maxParticipants;

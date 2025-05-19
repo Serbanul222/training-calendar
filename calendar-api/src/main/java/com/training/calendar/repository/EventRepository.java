@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Repository
@@ -28,6 +29,16 @@ public interface EventRepository extends JpaRepository<Event, String> {
     // Check if an event has available spots
     @Query("SELECT CASE WHEN COUNT(p) < e.maxParticipants THEN true ELSE false END FROM Event e LEFT JOIN e.participants p WHERE e.id = :eventId GROUP BY e.id, e.maxParticipants")
     Boolean hasAvailableSpots(@Param("eventId") String eventId);
+
+    @Query("SELECT e FROM Event e WHERE e.eventDate = :date AND " +
+            "((e.startTime <= :endTime AND e.endTime >= :startTime))")
+    List<Event> findOverlappingEvents(
+            @Param("date") LocalDate date,
+            @Param("startTime") LocalTime startTime,
+            @Param("endTime") LocalTime endTime);
+
+    // Find events for a specific day
+    List<Event> findByEventDateOrderByStartTime(LocalDate date);
 
     // Count events by category
     Long countByCategoryId(String categoryId);

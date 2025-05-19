@@ -1,15 +1,17 @@
+// src/main/java/com/training/calendar/model/Event.java
 package com.training.calendar.model;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDate;
+import java.time.LocalTime;  // Add this import
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -27,6 +29,13 @@ public class Event {
 
     @NotNull
     private LocalDate eventDate;
+
+    // Add start and end time fields
+    @NotNull
+    private LocalTime startTime;
+
+    @NotNull
+    private LocalTime endTime;
 
     @NotBlank
     @Column(name = "category_id")
@@ -47,6 +56,15 @@ public class Event {
     public void onPrePersist() {
         if (id == null) {
             this.id = UUID.randomUUID().toString();
+        }
+
+        // Set default times if they are null
+        if (startTime == null) {
+            this.startTime = LocalTime.of(9, 0); // Default to 9:00 AM
+        }
+
+        if (endTime == null) {
+            this.endTime = LocalTime.of(17, 0); // Default to 5:00 PM
         }
     }
 

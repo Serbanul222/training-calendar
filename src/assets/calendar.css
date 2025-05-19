@@ -1,0 +1,123 @@
+/* src/assets/calendar.css */
+
+/* General calendar styles */
+.fc {
+  --fc-border-color: #ddd;
+  --fc-page-bg-color: #fff;
+  --fc-neutral-bg-color: #f8f9fa;
+  --fc-list-event-hover-bg-color: #f5f5f5;
+  --fc-today-bg-color: #fff8e6;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Time slot styling */
+.fc .fc-timegrid-slot {
+  height: 2.5em !important;
+  border-bottom: 1px dashed #ddd;
+}
+
+.fc .fc-timegrid-axis-cushion,
+.fc .fc-timegrid-slot-label-cushion {
+  font-size: 0.85em;
+  color: #555;
+}
+
+/* Current time indicator */
+.fc .fc-timegrid-now-indicator-line {
+  border-color: #f44336;
+}
+
+.fc .fc-timegrid-now-indicator-arrow {
+  border-color: #f44336;
+  background-color: #f44336;
+}
+
+/* Event styling */
+.fc-event {
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  margin: 1px 0;
+  transition: box-shadow 0.15s ease;
+}
+
+.fc-event:hover {
+  box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+}
+
+.fc-event-title {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.95em;
+  padding: 2px 0;
+}
+
+.fc-event-time {
+  font-size: 0.85em;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.fc-event-participants {
+  font-size: 0.85em;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+/* Day header styling */
+.fc .fc-col-header-cell-cushion {
+  font-weight: 600;
+  padding: 8px 4px;
+}
+
+/* More link styling */
+.fc-daygrid-more-link {
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.85em;
+  color: #666;
+}
+
+/* Category-specific colors */
+.fc-event.CONSULTANTA, 
+.fc-list-event.CONSULTANTA .fc-list-event-dot {
+  background-color: #cfe2ff !important;
+  border-left: 4px solid #4a86e8 !important;
+  color: #333 !important;
+}
+
+.fc-event.OPTOMETRIE,
+.fc-list-event.OPTOMETRIE .fc-list-event-dot {
+  background-color: #e6ccff !important;
+  border-left: 4px solid #9900ff !important;
+  color: #333 !important;
+}
+
+.fc-event.PRODUSE_HOYA,
+.fc-list-event.PRODUSE_HOYA .fc-list-event-dot {
+  background-color: #fff2cc !important;
+  border-left: 4px solid #f1c232 !important;
+  color: #333 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .fc .fc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .fc .fc-toolbar-title {
+    font-size: 1.25em;
+  }
+  
+  .fc .fc-timegrid-slots {
+    font-size: 0.9em;
+  }
+  
+  .fc .fc-timegrid-slot {
+    height: 2em !important;
+  }
+}
