@@ -1,0 +1,70 @@
+/* Basic Vue-Cal styles */
+.vuecal__event {
+  position: relative;
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  overflow: hidden;
+}
+
+.vuecal__event-title {
+  font-weight: bold;
+}
+
+.vuecal__event-content {
+  font-size: 0.9em;
+}
+
+/* Event categories styling */
+.vuecal__event.consultanta {
+  background-color: #cfe2ff;
+  border-left: 4px solid #4a86e8;
+}
+
+.vuecal__event.optometrie {
+  background-color: #e6ccff;
+  border-left: 4px solid #9900ff;
+}
+
+.vuecal__event.produse_hoya {
+  background-color: #fff2cc;
+  border-left: 4px solid #f1c232;
+}
+
+.vuecal__weekdays-headings {
+  font-weight: bold;
+  border-bottom: 1px solid #ddd;
+}
+
+.vuecal__header {
+  background-color: #f8f9fa;
+  padding: 10px;
+}
+
+.vuecal__weekday-cells {
+  border-right: 1px solid #eee;
+}
+
+.vuecal__cell {
+  position: relative;
+  border-left: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+}
+
+.vuecal__cell-content {
+  padding: 5px;
+  min-height: 10px;
+}
+
+.vuecal__view-title {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin: 0 0.5em;
+}
+
+.vuecal__arrow--prev,
+.vuecal__arrow--next {
+  cursor: pointer;
+  padding: 0.3em 0.6em;
+  font-size: 1.2em;
+}
