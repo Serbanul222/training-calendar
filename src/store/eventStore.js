@@ -1,324 +1,207 @@
 // src/store/eventStore.js
-import { reactive, markRaw } from 'vue';
+import { reactive } from 'vue';
+import eventApi from '@/api/eventApi';
+import participantApi from '@/api/participantApi';
 import { TRAINING_CATEGORIES } from '../constants/trainingCategories';
 
-const STORAGE_KEY = 'training-calendar-events';
+const eventStore = reactive({
+  events: [],
+  loading: false,
+  error: null,
 
-// Simple memoization function to cache repeated operations
-function memoize(fn) {
-  const cache = new Map();
-  return function(...args) {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) return cache.get(key);
-    const result = fn.apply(this, args);
-    cache.set(key, result);
-    return result;
-  };
-}
+// In your eventStore.js
+async loadEvents(year, month) {
+  this.loading = true;
+  this.error = null;
 
-export function useEventStore() {
-  // Use a reactive array for events with markRaw to prevent deep reactivity
-  const events = reactive([]);
-  
-  // Generate sample events for demo
-  const generateSampleEvents = memoize(() => {
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+  try {
+    let eventData;
+    if (year !== undefined && month !== undefined) {
+      console.log(`Fetching events for year: ${year}, month: ${month}`);
+      eventData = await eventApi.getEventsByMonth(year, month);
+    } else {
+      console.log('Fetching all events');
+      eventData = await eventApi.getEvents();
+    }
     
-    return [
-      {
-        id: '1',
-        title: 'ZIUA CONSULTANȚEI - București (0/10)',
-        start: new Date(year, month, 15).toISOString().split('T')[0],
-        end: new Date(year, month, 15).toISOString().split('T')[0],
-        allDay: true,
-        backgroundColor: TRAINING_CATEGORIES['CONSULTANTA'].backColor,
-        borderColor: TRAINING_CATEGORIES['CONSULTANTA'].color,
-        extendedProps: markRaw({
-          category: 'CONSULTANTA',
-          location: 'București',
-          maxParticipants: 10,
-          description: 'Training event for consultancy',
-          participants: []
-        }),
-        classNames: ['CONSULTANTA'],
-        display: 'block'
-      },
-      {
-        id: '2',
-        title: 'ZIUA OPTOMETRIEI - Cluj (0/8)',
-        start: new Date(year, month, 20).toISOString().split('T')[0],
-        end: new Date(year, month, 20).toISOString().split('T')[0],
-        allDay: true,
-        backgroundColor: TRAINING_CATEGORIES['OPTOMETRIE'].backColor,
-        borderColor: TRAINING_CATEGORIES['OPTOMETRIE'].color,
-        extendedProps: markRaw({
-          category: 'OPTOMETRIE',
-          location: 'Cluj',
-          maxParticipants: 8,
-          description: 'Training event for optometry',
-          participants: []
-        }),
-        classNames: ['OPTOMETRIE'],
-        display: 'block'
-      },
-      {
-        id: '3',
-        title: 'ZIUA PRODUSELOR HOYA - Timișoara (0/12)',
-        start: new Date(year, month, 25).toISOString().split('T')[0],
-        end: new Date(year, month, 25).toISOString().split('T')[0],
-        allDay: true,
-        backgroundColor: TRAINING_CATEGORIES['PRODUSE_HOYA'].backColor,
-        borderColor: TRAINING_CATEGORIES['PRODUSE_HOYA'].color,
-        extendedProps: markRaw({
-          category: 'PRODUSE_HOYA',
-          location: 'Timișoara',
-          maxParticipants: 12,
-          description: 'Training event for HOYA products',
-          participants: []
-        }),
-        classNames: ['PRODUSE_HOYA'],
-        display: 'block'
-      }
-    ];
-  });
-  
-  // Load events from localStorage - optimized to reduce unnecessary processing
-  function loadEvents() {
+    console.log('Raw event data received:', eventData);
+    
+    if (Array.isArray(eventData)) {
+      // Format the events
+      const formattedEvents = eventData.map(event => this._formatEventForCalendar(event));
+      
+      // Clear the array while maintaining reactivity
+      this.events.length = 0;
+      
+      // Add all events at once (more efficient)
+      this.events.push(...formattedEvents);
+      
+      console.log('Events after loading:', this.events.length, this.events);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error loading events:', error);
+    this.error = 'Failed to load events';
+    return false;
+  } finally {
+    this.loading = false;
+  }
+},
+  // Helper method to format events for FullCalendar
+// In src/store/eventStore.js - update _formatEventForCalendar
+_formatEventForCalendar(event) {
+  console.log('Formatting event for calendar:', event);
+  const category = TRAINING_CATEGORIES[event.categoryId];
+  const result = {
+    id: event.id,
+    title: `${category?.name || event.categoryId} - ${event.location} (${event.participants?.length || 0}/${event.maxParticipants})`,
+    start: event.eventDate,
+    end: event.eventDate,
+    allDay: true,
+    backgroundColor: category?.backColor || '#f0f0f0',
+    borderColor: category?.color || '#ccc',
+    extendedProps: {
+      category: event.categoryId,
+      location: event.location,
+      maxParticipants: event.maxParticipants,
+      description: event.description,
+      participants: event.participants || []
+    },
+    classNames: [event.categoryId],
+    display: 'block'
+  };
+  console.log('Formatted event:', result);
+  return result;
+},
+
+  async addEvent(eventData) {
+    this.loading = true;
+    this.error = null;
+
     try {
-      // Check if we already have events loaded
-      if (events.length > 0) {
-        console.log('Events already loaded, skipping load');
-        return;
-      }
-      
-      const savedEvents = localStorage.getItem(STORAGE_KEY);
-      if (!savedEvents) {
-        // No saved events, load samples
-        const sampleEvents = generateSampleEvents();
-        events.push(...sampleEvents);
-        console.log('Loaded sample events:', events.length);
-        return;
-      }
-      
-      // Parse saved events
-      const loadedEvents = JSON.parse(savedEvents);
-      if (!Array.isArray(loadedEvents) || loadedEvents.length === 0) {
-        // Invalid saved events, load samples
-        const sampleEvents = generateSampleEvents();
-        events.push(...sampleEvents);
-        console.log('Invalid saved events, loaded sample events:', events.length);
-        return;
-      }
-      
-      // Clear events array and add loaded events
-      events.length = 0; // Faster than splice for clearing
-      loadedEvents.forEach(event => {
-        // Mark extendedProps as raw to prevent deep reactivity
-        if (event.extendedProps) {
-          event.extendedProps = markRaw(event.extendedProps);
-        }
-        events.push(event);
+      const newEvent = await eventApi.createEvent({
+        eventDate: eventData.eventDate || eventData.date,
+        categoryId: eventData.categoryId || eventData.category,
+        location: eventData.location,
+        maxParticipants: eventData.maxParticipants,
+        description: eventData.description
       });
       
-      console.log('Loaded events from storage:', events.length);
+      const formattedEvent = this._formatEventForCalendar(newEvent);
+      this.events.push(formattedEvent);
+      return formattedEvent;
     } catch (error) {
-      console.error('Error loading events:', error);
+      console.error('Error adding event:', error);
+      this.error = 'Failed to add event';
+      throw error;
+    } finally {
+      this.loading = false;
+    }
+  },
+
+  async updateEvent(eventData) {
+    this.loading = true;
+    this.error = null;
+
+    try {
+      const updatedEvent = await eventApi.updateEvent(eventData.id, {
+        eventDate: eventData.eventDate || eventData.date,
+        categoryId: eventData.categoryId || eventData.category,
+        location: eventData.location,
+        maxParticipants: eventData.maxParticipants,
+        description: eventData.description
+      });
       
-      // Clear events array and add sample events
-      events.length = 0;
-      const sampleEvents = generateSampleEvents();
-      events.push(...sampleEvents);
-    }
-  }
-  
-  // Save events to localStorage - debounced to prevent too frequent saves
-  let saveTimeout = null;
-  function saveEvents() {
-    // Clear previous timeout
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
-    
-    // Set new timeout to debounce saves
-    saveTimeout = setTimeout(() => {
-      try {
-        // Create a simplified copy of events for storage
-        const eventsToSave = events.map(event => {
-          // Create simplified copy without deep Vue reactivity
-          const simplifiedEvent = { ...event };
-          if (event.extendedProps) {
-            simplifiedEvent.extendedProps = { ...event.extendedProps };
-          }
-          return simplifiedEvent;
-        });
-        
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(eventsToSave));
-      } catch (error) {
-        console.error('Error saving events:', error);
+      const formattedEvent = this._formatEventForCalendar(updatedEvent);
+      const index = this.events.findIndex(event => event.id === eventData.id);
+      if (index !== -1) {
+        this.events[index] = formattedEvent;
       }
-    }, 300); // Debounce time
-  }
-  
-  // Add a new event - optimized
-  function addEvent(eventData) {
-    const category = TRAINING_CATEGORIES[eventData.category];
-    if (!category) {
-      console.error('Invalid category:', eventData.category);
-      return null;
+      return formattedEvent;
+    } catch (error) {
+      console.error('Error updating event:', error);
+      this.error = 'Failed to update event';
+      throw error;
+    } finally {
+      this.loading = false;
     }
+  },
+
+  // In eventStore.js
+async deleteEvent(id) {
+  this.loading = true;
+  this.error = null;
+
+  try {
+    await eventApi.deleteEvent(id);
     
-    const id = eventData.id || Date.now().toString();
-    
-    // Ensure we have a date
-    if (!eventData.date) {
-      console.error('No date provided for event');
-      return null;
+    // Find and remove the event from the local array
+    const index = this.events.findIndex(event => event.id === id);
+    if (index !== -1) {
+      this.events.splice(index, 1); // This should trigger reactivity
+      console.log('Event removed from local store');
+    } else {
+      console.warn('Event not found in local store');
     }
-    
-    const participants = eventData.participants || [];
-    const maxParticipants = eventData.maxParticipants || 10;
-    
-    // Create the new event with markRaw for performance
-    const newEvent = {
-      id,
-      title: `${category.name} - ${eventData.location} (${participants.length}/${maxParticipants})`,
-      start: eventData.date,
-      end: eventData.date,
-      allDay: true,
-      extendedProps: markRaw({
-        category: eventData.category,
-        location: eventData.location,
-        maxParticipants: maxParticipants,
-        description: eventData.description || '',
-        participants: [...participants]
-      }),
-      classNames: [eventData.category],
-      display: 'block',
-      backgroundColor: category.backColor,
-      borderColor: category.color
-    };
-    
-    // Add to the reactive array
-    events.push(newEvent);
-    saveEvents();
-    
-    return { ...newEvent, extendedProps: { ...newEvent.extendedProps } };
-  }
-  
-  // Update an existing event - optimized
-  function updateEvent(eventData) {
-    const index = events.findIndex(e => e.id === eventData.id);
-    if (index === -1) {
-      console.error('Event not found for update:', eventData.id);
-      return null;
-    }
-    
-    const category = TRAINING_CATEGORIES[eventData.category];
-    if (!category) {
-      console.error('Invalid category for update:', eventData.category);
-      return null;
-    }
-    
-    // Create copies of data to avoid reference issues
-    const participants = eventData.participants ? [...eventData.participants] : 
-                         events[index].extendedProps.participants ? [...events[index].extendedProps.participants] : [];
-    const maxParticipants = eventData.maxParticipants || 10;
-    
-    // Create the updated event
-    const updatedEvent = {
-      ...events[index],
-      id: eventData.id,
-      title: `${category.name} - ${eventData.location} (${participants.length}/${maxParticipants})`,
-      start: eventData.date || events[index].start,
-      end: eventData.date || events[index].end,
-      allDay: true,
-      extendedProps: markRaw({
-        category: eventData.category,
-        location: eventData.location,
-        maxParticipants: maxParticipants,
-        description: eventData.description || '',
-        participants: participants
-      }),
-      classNames: [eventData.category],
-      backgroundColor: category.backColor,
-      borderColor: category.color
-    };
-    
-    // Update in place - better performance than creating a new array
-    events[index] = updatedEvent;
-    saveEvents();
-    
-    return { ...updatedEvent, extendedProps: { ...updatedEvent.extendedProps } };
-  }
-  
-  // Delete an event - optimized
-  function deleteEvent(id) {
-    const index = events.findIndex(e => e.id === id);
-    if (index === -1) return false;
-    
-    // Remove event in-place
-    events.splice(index, 1);
-    saveEvents();
     
     return true;
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    this.error = 'Failed to delete event';
+    return false;
+  } finally {
+    this.loading = false;
   }
-  
-  // Add a participant to an event - optimized
-  function addParticipant(eventId, participant) {
-    const index = events.findIndex(e => e.id === eventId);
-    if (index === -1) {
-      console.error('Event not found for adding participant:', eventId);
-      return false;
+},
+
+  // In src/store/eventStore.js - update addParticipant
+async addParticipant(eventId, participant) {
+  this.loading = true;
+  this.error = null;
+
+  try {
+    console.log("Adding participant to event:", eventId, participant);
+    const newParticipant = await participantApi.registerForEvent(eventId, participant);
+    console.log("Participant added successfully:", newParticipant);
+    
+    // Update the event in the store
+    const eventIndex = this.events.findIndex(e => e.id === eventId);
+    if (eventIndex !== -1) {
+      console.log("Found event to update:", this.events[eventIndex]);
+      
+      // Ensure participants array exists
+      if (!this.events[eventIndex].extendedProps.participants) {
+        this.events[eventIndex].extendedProps.participants = [];
+      }
+      
+      // Add the new participant
+      this.events[eventIndex].extendedProps.participants.push(newParticipant);
+      
+      // Update the title with new participant count
+      const category = TRAINING_CATEGORIES[this.events[eventIndex].extendedProps.category];
+      const participantsCount = this.events[eventIndex].extendedProps.participants.length;
+      const maxParticipants = this.events[eventIndex].extendedProps.maxParticipants;
+      this.events[eventIndex].title = `${category?.name || this.events[eventIndex].extendedProps.category} - ${this.events[eventIndex].extendedProps.location} (${participantsCount}/${maxParticipants})`;
+      
+      console.log("Updated event:", this.events[eventIndex]);
+    } else {
+      console.warn("Event not found in local store:", eventId);
+      // Force a reload of all events to ensure consistency
+      await this.loadEvents();
     }
     
-    const event = events[index];
-    const extendedProps = event.extendedProps;
-    
-    if (!extendedProps.participants) {
-      extendedProps.participants = [];
-    }
-    
-    // Check if event is full
-    if (extendedProps.participants.length >= extendedProps.maxParticipants) {
-      console.error('Event is full');
-      return false;
-    }
-    
-    // Create a new participant object
-    const newParticipant = {
-      id: participant.id || Date.now().toString(),
-      participantEmail: participant.participantEmail || '',
-      participantName: participant.participantName || '',
-      managerEmail: participant.managerEmail || '',
-      location: participant.location || ''
-    };
-    
-    // Add participant
-    extendedProps.participants.push(newParticipant);
-    
-    // Update event title to show participant count
-    const category = TRAINING_CATEGORIES[extendedProps.category];
-    event.title = `${category.name} - ${extendedProps.location} (${extendedProps.participants.length}/${extendedProps.maxParticipants})`;
-    
-    saveEvents();
     return true;
+  } catch (error) {
+    console.error('Error adding participant:', error);
+    this.error = 'Failed to register for event';
+    return false;
+  } finally {
+    this.loading = false;
   }
-  
-  // Clear all events (for testing/debugging)
-  function clearEvents() {
-    events.length = 0;
-    saveEvents();
-  }
-  
-  return {
-    events,
-    loadEvents,
-    addEvent,
-    updateEvent,
-    deleteEvent,
-    addParticipant,
-    clearEvents
-  };
+}
+});
+
+export function useEventStore() {
+  return eventStore;
 }

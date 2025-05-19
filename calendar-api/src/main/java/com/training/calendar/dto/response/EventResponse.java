@@ -1,0 +1,25 @@
+package com.training.calendar.dto.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class EventResponse {
+    private String id;
+    private LocalDate eventDate;
+    private String categoryId;
+    private String location;
+    private int maxParticipants;
+    private String description;
+    private List<ParticipantResponse> participants;
+    private int availableSpots;
+    private boolean isFull;
+}
