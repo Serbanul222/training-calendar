@@ -10,7 +10,8 @@
         <form @submit.prevent="submitForm">
           <div class="form-group">
             <label for="eventName">Event Name:</label>
-            <input type="text" id="eventName" v-model="formData.name" required />
+
+            <input type="text" id="eventName" v-model="formData.name" required>
           </div>
 
           <div class="form-group">
@@ -153,6 +154,7 @@ const timeConflict = ref(false);
 // Local form data
 const formData = reactive({
   id: '',
+  name: '',
   category: 'CONSULTANTA',
   name: '',
   location: '',
@@ -171,6 +173,7 @@ const datePreselected = computed(() => !!props.eventDate);
 watch(() => props.eventData, (newValue) => {
   if (newValue && props.isEditMode) {
     formData.id = newValue.id || '';
+    formData.name = newValue.name || '';
     formData.category = newValue.category || 'CONSULTANTA';
     formData.name = newValue.name || '';
     formData.location = newValue.location || '';
@@ -186,6 +189,7 @@ watch(() => props.eventData, (newValue) => {
   } else {
     // For new events
     formData.id = '';
+    formData.name = '';
     formData.category = 'CONSULTANTA';
     formData.name = '';
     formData.location = '';

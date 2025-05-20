@@ -83,6 +83,7 @@ public class EventServiceImpl implements EventService {
         }
 
         Event event = new Event();
+        event.setName(eventRequest.getName());
         event.setEventDate(eventRequest.getEventDate());
         event.setStartTime(eventRequest.getStartTime());
         event.setEndTime(eventRequest.getEndTime());
@@ -123,6 +124,7 @@ public class EventServiceImpl implements EventService {
         }
 
         // Update event properties
+        event.setName(eventRequest.getName());
         event.setEventDate(eventRequest.getEventDate());
         event.setStartTime(eventRequest.getStartTime());
         event.setEndTime(eventRequest.getEndTime());
@@ -193,6 +195,7 @@ public class EventServiceImpl implements EventService {
 
         return EventResponse.builder()
                 .id(event.getId())
+                .name(event.getName())
                 .eventDate(event.getEventDate())
                 .startTime(event.getStartTime())
                 .endTime(event.getEndTime())
