@@ -18,7 +18,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class User {
     @Id
-    @GeneratedValue
     private UUID id;
 
     @Column(unique = true)

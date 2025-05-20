@@ -16,8 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UserRole {
     @Id
-    @GeneratedValue
-    private UUID id;
+    private String id;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -30,7 +29,7 @@ public class UserRole {
     @PrePersist
     public void onPrePersist() {
         if (id == null) {
-            id = UUID.randomUUID();
+            id = UUID.randomUUID().toString();
         }
     }
 }
