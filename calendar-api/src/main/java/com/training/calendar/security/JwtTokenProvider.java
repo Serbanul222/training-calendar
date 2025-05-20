@@ -1,16 +1,15 @@
 package com.training.calendar.security;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws; // Import Jws
 import io.jsonwebtoken.Jwts;
-// import io.jsonwebtoken.SignatureAlgorithm; // Keep if you use the explicit version in signWith
+import io.jsonwebtoken.SignatureAlgorithm; // Kept from k7qgdy-codex
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
-import javax.crypto.SecretKey; // Import SecretKey
+// Removed: import javax.crypto.SecretKey; (as it's from unstable-code)
 
 @Component
 public class JwtTokenProvider {
@@ -21,7 +20,7 @@ public class JwtTokenProvider {
     @Value("${security.jwt.expiration-ms:3600000}")
     private long jwtExpirationMs;
 
-    private SecretKey getSigningKey() { // Return SecretKey for better type safety with verifyWith
+    private Key getSigningKey() { // Kept from k7qgdy-codex
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
@@ -32,30 +31,23 @@ public class JwtTokenProvider {
                 .setSubject(username)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
-                .signWith(getSigningKey()) // Algorithm is inferred from the SecretKey type (HS256)
-                // Or, if you prefer explicit: .signWith(getSigningKey(), Jwts.SIG.HS256)
-                // Or, the older way: .signWith(getSigningKey(), SignatureAlgorithm.HS256) if you have jjwt-impl
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // Kept from k7qgdy-codex
                 .compact();
     }
 
     public String getUsername(String token) {
-        Jws<Claims> claimsJws = Jwts.parser()
-                .verifyWith(getSigningKey()) // Use verifyWith
-                .build()
-                .parseSignedClaims(token); // Use parseSignedClaims or parseClaimsJws
-        return claimsJws.getPayload().getSubject(); // getPayload() is the modern way
+        Claims claims = Jwts.parser() // Kept from k7qgdy-codex
+                .setSigningKey(getSigningKey())
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getSubject();
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parser()
-                    .verifyWith(getSigningKey()) // Use verifyWith
-                    .build()
-                    .parseSignedClaims(token); // Use parseSignedClaims or parseClaimsJws
+            Jwts.parser().setSigningKey(getSigningKey()).parseClaimsJws(token); // Kept from k7qgdy-codex
             return true;
         } catch (Exception e) {
-            // It's good practice to log the exception here
-            // e.g., log.warn("JWT validation error: {}", e.getMessage());
             return false;
         }
     }
