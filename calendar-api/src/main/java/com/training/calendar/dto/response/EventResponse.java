@@ -21,7 +21,6 @@ public class EventResponse {
     private LocalTime startTime;
     private LocalTime endTime;
     private String categoryId;
-    private String name;
     private String location;
     private int maxParticipants;
     private String description;
