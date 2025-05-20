@@ -283,7 +283,7 @@ watch(currentView, async (newView) => {
     await loadEventsByDay(formattedDate);
   } else {
     // For month/week view, load events for the month
-    await loadEventsByMonth(currentYear.value, selectedMonth.value);
+    await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
   }
   
   forceCalendarRefresh();
@@ -293,7 +293,7 @@ watch(currentView, async (newView) => {
 watch([currentYear, selectedMonth], async ([newYear, newMonth]) => {
   console.log(`Month/year changed to ${newMonth+1}/${newYear}`);
   if (currentView.value === 'dayGridMonth') {
-    await loadEventsByMonth(newYear, newMonth);
+    await loadEventsByMonth(newYear, newMonth + 1);
   }
 });
 
@@ -443,7 +443,7 @@ function confirmDeleteEvent(eventId) {
         const formattedDate = selectedDate.toISOString().split('T')[0];
         await loadEventsByDay(formattedDate);
       } else {
-        await loadEventsByMonth(currentYear.value, selectedMonth.value);
+        await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
       }
     }
   };
@@ -464,7 +464,7 @@ async function handleEventSubmit(formData) {
       const formattedDate = selectedDate.toISOString().split('T')[0];
       await loadEventsByDay(formattedDate);
     } else {
-      await loadEventsByMonth(currentYear.value, selectedMonth.value);
+      await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
     }
   }
 }
@@ -490,7 +490,7 @@ async function handleRegistrationSubmit(formData) {
         const formattedDate = selectedDate.toISOString().split('T')[0];
         await loadEventsByDay(formattedDate);
       } else {
-        await loadEventsByMonth(currentYear.value, selectedMonth.value);
+        await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
       }
     }
   };
@@ -528,7 +528,7 @@ onMounted(async () => {
   console.log('TrainingCalendar component mounted');
   
   // Load initial events
-  await loadEventsByMonth(currentYear.value, selectedMonth.value);
+  await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
   
   // Wait a short time to ensure FullCalendar is fully rendered
   setTimeout(() => {
@@ -563,7 +563,7 @@ const refreshInterval = setInterval(async () => {
     const formattedDate = selectedDate.toISOString().split('T')[0];
     await loadEventsByDay(formattedDate);
   } else {
-    await loadEventsByMonth(currentYear.value, selectedMonth.value);
+    await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
   }
 }, 60000); // Every 60 seconds
 
