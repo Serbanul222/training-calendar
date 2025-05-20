@@ -1,5 +1,6 @@
 import { reactive } from 'vue';
 import eventApi from '@/api/eventApi';
+import participantApi from '@/api/participantApi';
 import { TRAINING_CATEGORIES } from '../constants/trainingCategories';
 
 const eventStore = reactive({
