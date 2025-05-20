@@ -3,11 +3,17 @@
     <header>
       <h1>Training Calendar System</h1>
     </header>
-    
+
     <main>
-      <TrainingCalendar />
+      <template v-if="token">
+        <TrainingCalendar />
+      </template>
+      <template v-else>
+        <LoginForm @logged-in="onAuth" />
+        <RegisterForm class="mt-4" @registered="onAuth" />
+      </template>
     </main>
-    
+
     <footer>
       <p>Training Calendar System &copy; 2025</p>
     </footer>
@@ -15,7 +21,15 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import TrainingCalendar from './components/TrainingCalendar.vue';
+import LoginForm from './components/LoginForm.vue';
+import RegisterForm from './components/RegisterForm.vue';
+
+const token = ref(localStorage.getItem('jwt'));
+function onAuth() {
+  token.value = localStorage.getItem('jwt');
+}
 </script>
 
 <style>
