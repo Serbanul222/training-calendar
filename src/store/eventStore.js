@@ -1,5 +1,6 @@
 import { reactive } from 'vue';
 import eventApi from '@/api/eventApi';
+import participantApi from '@/api/participantApi';
 import { TRAINING_CATEGORIES } from '../constants/trainingCategories';
 
 const eventStore = reactive({
@@ -80,7 +81,7 @@ const eventStore = reactive({
     try {
       // Ensure data is in the format expected by the backend
       const eventRequest = {
-        eventDate: eventData.eventDate || eventData.date,
+        eventDate: (eventData.eventDate || eventData.date)?.split('T')[0],
         startTime: eventData.startTime || '09:00',
         endTime: eventData.endTime || '17:00',
         categoryId: eventData.categoryId || eventData.category,
@@ -115,7 +116,7 @@ const eventStore = reactive({
     try {
       // Ensure data is in the format expected by the backend
       const eventRequest = {
-        eventDate: eventData.eventDate || eventData.date,
+        eventDate: (eventData.eventDate || eventData.date)?.split('T')[0],
         startTime: eventData.startTime || '09:00',
         endTime: eventData.endTime || '17:00',
         categoryId: eventData.categoryId || eventData.category,
