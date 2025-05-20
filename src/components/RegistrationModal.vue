@@ -213,8 +213,7 @@ function getEventTitleFromProps() {
   if (!props.event) return '';
   if (props.event.title) return props.event.title;
   
-  const category = props.categories[props.event.extendedProps?.category];
-  return `${category?.name || ''} - ${props.event.extendedProps?.location || ''}`;
+  return `${props.event.extendedProps?.name || ''} - ${props.event.extendedProps?.location || ''}`;
 }
 
 // Helper to get participant name
