@@ -27,6 +27,9 @@ public class Event {
     @Id
     private String id;
 
+    @NotBlank
+    private String name;
+
     @NotNull
     private LocalDate eventDate;
 

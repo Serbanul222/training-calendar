@@ -25,8 +25,7 @@ const emit = defineEmits(['update:view']);
 
 const views = [
   { value: 'dayGridMonth', label: 'Month', tooltip: 'Month view' },
-  { value: 'timeGridWeek', label: 'Week', tooltip: 'Week view with time slots' },
-  { value: 'timeGridDay', label: 'Day', tooltip: 'Day view with detailed time slots' }
+  { value: 'timeGridWeek', label: 'Week', tooltip: 'Week view with time slots' }
 ];
 
 function switchView(viewType) {

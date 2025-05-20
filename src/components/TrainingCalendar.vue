@@ -17,8 +17,6 @@
       @update:view="setView"
     />
     
-    <!-- Category legend -->
-    <CategoryLegend :categories="Object.values(TRAINING_CATEGORIES)" />
     
     <!-- Loading indicator -->
     <div v-if="loading" class="loading-indicator">Loading calendar data...</div>
@@ -35,7 +33,7 @@
       :show="showEventForm"
       :is-edit-mode="isEditMode"
       :event-data="eventForm"
-      :categories="Object.values(TRAINING_CATEGORIES)"
+      :categories="categories"
       :event-date="selectedDate"
       @submit="handleEventSubmit"
       @close="closeEventForm"
@@ -46,7 +44,7 @@
       v-if="showRegistrationForm"
       :show="showRegistrationForm"
       :event="selectedEventSnapshot"
-      :categories="TRAINING_CATEGORIES"
+      :categories="categoriesMap"
       @submit="handleRegistrationSubmit"
       @close="closeRegistrationForm"
     />
@@ -76,11 +74,10 @@ import interactionPlugin from '@fullcalendar/interaction';
 import roLocale from '@fullcalendar/core/locales/ro';
 
 import { MONTHS } from '../constants/months';
-import { TRAINING_CATEGORIES } from '../constants/trainingCategories';
+import { useEventStore } from '../store/eventStore';
 
 // Import components
 import CalendarHeader from './CalendarHeader.vue';
-import CategoryLegend from './CategoryLegend.vue';
 import EventModal from './EventModal.vue';
 import RegistrationModal from './RegistrationModal.vue';
 import ConfirmationModal from './modals/ConfirmationModal.vue';
@@ -103,8 +100,8 @@ const currentView = ref('dayGridMonth'); // Default view is month
 
 // Setup composables
 const { 
-  events, loading, error, 
-  loadEventsByMonth, loadEventsByDay,
+  events, loading, error,
+  loadEventsByMonth,
   deleteEvent, submitEvent, 
   registerForEvent 
 } = useCalendarEvents();
@@ -114,6 +111,10 @@ const {
   handleDatesSet, forceCalendarRefresh,
   updateCalendarEditableOptions
 } = useCalendarNavigation(fullCalendar);
+
+const eventStore = useEventStore();
+const categoriesMap = eventStore.categories;
+const categories = computed(() => Object.values(categoriesMap));
 
 // Admin state
 const isAdmin = ref(localStorage.getItem('isAdmin') === 'true' || false);
@@ -126,8 +127,9 @@ const isEditMode = ref(false);
 
 // Form data
 const eventForm = reactive({
-  id: '', 
-  category: 'CONSULTANTA', 
+  id: '',
+  name: '',
+  category: 'CONSULTANTA',
   location: '',
   date: '',
   startTime: '09:00', // Default start time
@@ -230,14 +232,7 @@ const calendarOptions = computed(() => {
           hour12: false
         }
       },
-      timeGridDay: {
-        // Day view configuration
-        dayHeaderFormat: { 
-          weekday: 'long', 
-          month: 'long', 
-          day: 'numeric' 
-        }
-      }
+      /* timeGridDay view removed */
     }
   };
 });
@@ -254,7 +249,7 @@ function setView(viewType) {
       const api = fullCalendar.value.getApi();
       
       // Make sure the view type exists and is properly registered
-      const availableViews = ['dayGridMonth', 'timeGridWeek', 'timeGridDay'];
+      const availableViews = ['dayGridMonth', 'timeGridWeek'];
       
       if (availableViews.includes(viewType)) {
         console.log(`Changing view to: ${viewType}`);
@@ -275,17 +270,8 @@ function setView(viewType) {
 }
 
 // Watch for view changes to load appropriate data
-watch(currentView, async (newView) => {
-  if (newView.includes('Day')) {
-    // For day view, load events for the specific day
-    const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
-    const formattedDate = selectedDate.toISOString().split('T')[0];
-    await loadEventsByDay(formattedDate);
-  } else {
-    // For month/week view, load events for the month
-    await loadEventsByMonth(currentYear.value, selectedMonth.value);
-  }
-  
+watch(currentView, async () => {
+  await loadEventsByMonth(currentYear.value, selectedMonth.value);
   forceCalendarRefresh();
 });
 
@@ -353,9 +339,10 @@ function handleEventClick(info) {
 // Handle clicking on a date
 function handleDateClick(info) {
   if (!isAdmin.value) return;
-  
+
   isEditMode.value = false;
-  selectedDate.value = info.dateStr;
+  const dateOnly = info.dateStr.split('T')[0];
+  selectedDate.value = dateOnly;
   
   // Get time information if available
   let startTime = '09:00';
@@ -371,25 +358,27 @@ function handleDateClick(info) {
     const endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
     
     Object.assign(eventForm, {
-      id: '', 
-      category: 'CONSULTANTA', 
+      id: '',
+      name: '',
+      category: 'CONSULTANTA',
       location: '',
-      maxParticipants: 10, 
-      description: '', 
-      participants: [], 
-      date: info.dateStr,
+      maxParticipants: 10,
+      description: '',
+      participants: [],
+      date: dateOnly,
       startTime,
       endTime
     });
   } else {
     Object.assign(eventForm, {
-      id: '', 
-      category: 'CONSULTANTA', 
+      id: '',
+      name: '',
+      category: 'CONSULTANTA',
       location: '',
-      maxParticipants: 10, 
-      description: '', 
-      participants: [], 
-      date: info.dateStr,
+      maxParticipants: 10,
+      description: '',
+      participants: [],
+      date: dateOnly,
       startTime: '09:00',
       endTime: '17:00'
     });
@@ -401,15 +390,18 @@ function handleDateClick(info) {
 // Prepare edit event
 function prepareEditEvent(eventData, info) {
   isEditMode.value = true;
-  
+
+  const dateOnly = eventData.start.split('T')[0];
+
   Object.assign(eventForm, {
     id: eventData.id,
+    name: eventData.extendedProps.name,
     category: eventData.extendedProps.category,
     location: eventData.extendedProps.location,
     maxParticipants: eventData.extendedProps.maxParticipants,
     description: eventData.extendedProps.description,
     participants: eventData.extendedProps.participants,
-    date: eventData.start,
+    date: dateOnly,
     startTime: eventData.extendedProps.startTime,
     endTime: eventData.extendedProps.endTime
   });
@@ -435,13 +427,7 @@ function confirmDeleteEvent(eventId) {
     if (success) {
       console.log('Event deleted, reloading calendar data');
       // Reload appropriate data based on current view
-      if (currentView.value.includes('Day')) {
-        const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
-        const formattedDate = selectedDate.toISOString().split('T')[0];
-        await loadEventsByDay(formattedDate);
-      } else {
-        await loadEventsByMonth(currentYear.value, selectedMonth.value);
-      }
+      await loadEventsByMonth(currentYear.value, selectedMonth.value);
     }
   };
   confirmationModalConfig.onCancel = () => {
@@ -456,13 +442,7 @@ async function handleEventSubmit(formData) {
     closeEventForm();
     
     // Reload appropriate data based on current view
-    if (currentView.value.includes('Day')) {
-      const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
-      const formattedDate = selectedDate.toISOString().split('T')[0];
-      await loadEventsByDay(formattedDate);
-    } else {
-      await loadEventsByMonth(currentYear.value, selectedMonth.value);
-    }
+    await loadEventsByMonth(currentYear.value, selectedMonth.value);
   }
 }
 
@@ -482,13 +462,7 @@ async function handleRegistrationSubmit(formData) {
       closeRegistrationForm();
       
       // Reload appropriate data based on current view
-      if (currentView.value.includes('Day')) {
-        const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
-        const formattedDate = selectedDate.toISOString().split('T')[0];
-        await loadEventsByDay(formattedDate);
-      } else {
-        await loadEventsByMonth(currentYear.value, selectedMonth.value);
-      }
+      await loadEventsByMonth(currentYear.value, selectedMonth.value);
     }
   };
 }
@@ -496,9 +470,10 @@ async function handleRegistrationSubmit(formData) {
 // Close modals
 function closeEventForm() {
   showEventForm.value = false;
-  Object.assign(eventForm, { 
-    id: '', 
-    category: 'CONSULTANTA', 
+  Object.assign(eventForm, {
+    id: '',
+    name: '',
+    category: 'CONSULTANTA',
     location: '', 
     maxParticipants: 10, 
     description: '', 
@@ -555,13 +530,7 @@ const refreshInterval = setInterval(async () => {
   console.log('Periodic events refresh');
   
   // Reload appropriate data based on current view
-  if (currentView.value.includes('Day')) {
-    const selectedDate = fullCalendar.value?.getApi().getDate() || new Date();
-    const formattedDate = selectedDate.toISOString().split('T')[0];
-    await loadEventsByDay(formattedDate);
-  } else {
-    await loadEventsByMonth(currentYear.value, selectedMonth.value);
-  }
+await loadEventsByMonth(currentYear.value, selectedMonth.value);
 }, 60000); // Every 60 seconds
 
 // Clean up interval on component unmount

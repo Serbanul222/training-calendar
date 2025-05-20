@@ -9,6 +9,11 @@
       <div class="modal-body">
         <form @submit.prevent="submitForm">
           <div class="form-group">
+            <label for="eventName">Event Name:</label>
+            <input type="text" id="eventName" v-model="formData.name" required>
+          </div>
+
+          <div class="form-group">
             <label for="eventCategory">Category:</label>
             <select id="eventCategory" v-model="formData.category" required>
               <option value="" disabled>Select a category</option>
@@ -148,6 +153,7 @@ const timeConflict = ref(false);
 // Local form data
 const formData = reactive({
   id: '',
+  name: '',
   category: 'CONSULTANTA',
   location: '',
   date: '',
@@ -165,6 +171,7 @@ const datePreselected = computed(() => !!props.eventDate);
 watch(() => props.eventData, (newValue) => {
   if (newValue && props.isEditMode) {
     formData.id = newValue.id || '';
+    formData.name = newValue.name || '';
     formData.category = newValue.category || 'CONSULTANTA';
     formData.location = newValue.location || '';
     formData.date = newValue.date || props.eventDate;
@@ -179,6 +186,7 @@ watch(() => props.eventData, (newValue) => {
   } else {
     // For new events
     formData.id = '';
+    formData.name = '';
     formData.category = 'CONSULTANTA';
     formData.location = '';
     formData.date = props.eventDate;
