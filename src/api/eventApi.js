@@ -57,21 +57,22 @@ export default {
   },
 
   createEvent(event) {
-    // For JSON payloads (POST/PUT), Spring Boot's Jackson deserializer is often flexible
-    // with date strings for LocalDate fields in DTOs.
-    // If event.eventDate is a JavaScript Date object, it will likely be serialized to an
-    // ISO 8601 string (e.g., "2025-05-01T00:00:00.000Z"). Spring can usually parse this
-    // into a LocalDate (extracting the date part).
-    // If event.eventDate is already a "yyyy-MM-dd" string, that's also typically fine.
-    // Explicit formatting here (e.g., eventDate: formatDateToYYYYMMDD(event.eventDate))
-    // might be needed if you encounter issues or if your backend DTO has strict @DateTimeFormat.
-    return apiClient.post('/events', event)
+    const payload = {
+      ...event,
+      eventDate: formatDateToYYYYMMDD(event.eventDate)
+    };
+
+    return apiClient.post('/events', payload)
       .then(response => response.data);
   },
 
   updateEvent(id, event) {
-    // Similar considerations as createEvent regarding event.eventDate formatting.
-    return apiClient.put(`/events/${id}`, event)
+    const payload = {
+      ...event,
+      eventDate: formatDateToYYYYMMDD(event.eventDate)
+    };
+
+    return apiClient.put(`/events/${id}`, payload)
       .then(response => response.data);
   },
 
