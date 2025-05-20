@@ -37,7 +37,7 @@ public class UserServiceImpl implements UserService {
         }
         Role userRole = roleRepository.findByName("ROLE_USER")
                 .orElseGet(() -> roleRepository.save(Role.builder()
-                        .id("ROLE_USER")
+                        .id("ROLE_USER") // Kept from k7qgdy-codex
                         .name("ROLE_USER")
                         .build()));
 

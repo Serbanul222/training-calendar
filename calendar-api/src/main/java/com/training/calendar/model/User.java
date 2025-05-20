@@ -18,7 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class User {
     @Id
-    private String id;
+    private String id; // Kept from k7qgdy-codex
 
     @Column(unique = true)
     private String email;
@@ -26,13 +26,13 @@ public class User {
     private String password;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @Builder.Default
+    @Builder.Default // Kept from k7qgdy-codex
     private List<UserRole> roles = new ArrayList<>();
 
     @PrePersist
     public void onPrePersist() {
         if (id == null) {
-            id = UUID.randomUUID().toString();
+            id = UUID.randomUUID().toString(); // Kept from k7qgdy-codex
         }
     }
 }
