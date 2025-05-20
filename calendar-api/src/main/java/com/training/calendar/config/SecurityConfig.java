@@ -1,9 +1,10 @@
 package com.training.calendar.config;
 
 import com.training.calendar.security.JwtAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Autowired; // Kept this line
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy; // Import @Lazy
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -24,12 +25,15 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity // Good to have for @PreAuthorize etc.
 public class SecurityConfig {
 
+    // Apply @Lazy to the field that is part of the circular dependency
+    @Lazy
     @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private JwtAuthenticationFilter jwtAuthenticationFilter; // This is where SecurityConfig needs JwtAuthenticationFilter
 
+    // The jwtAuthenticationFilter parameter here will be the (potentially lazy) bean resolved by Spring
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
@@ -41,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                // Use the injected jwtAuthenticationFilter bean
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

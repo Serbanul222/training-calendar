@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Entity
 @Table(name = "user_roles")
 @Data
@@ -15,21 +13,20 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserRole {
-    @Id
-    private String id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @EmbeddedId // Marks this field as an embedded composite primary key
+    private UserRoleId id;
+
+    @ManyToOne(fetch = FetchType.LAZY) // LAZY is generally better for *-to-one from a join entity
+    @MapsId("userId") // Specifies that 'userId' field of UserRoleId maps to this User association
+    @JoinColumn(name = "user_id") // DB column name
     private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "role_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("roleId") // Specifies that 'roleId' field of UserRoleId maps to this Role association
+    @JoinColumn(name = "role_id") // DB column name
     private Role role;
 
-    @PrePersist
-    public void onPrePersist() {
-        if (id == null) {
-            id = UUID.randomUUID().toString();
-        }
-    }
+    // The @PrePersist for a separate 'id' is no longer needed
+    // as the ID is now composite and derived from User and Role.
 }

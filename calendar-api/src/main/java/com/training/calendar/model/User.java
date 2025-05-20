@@ -6,33 +6,46 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users") // Assumes your DB table is named "users"
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
     @Id
-    private String id; // Kept from k7qgdy-codex
+    private UUID id; // App-generated via @PrePersist
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String email;
 
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
     private String password;
 
+    @Column(name = "first_login")
+    private Timestamp firstLogin; // Mapped to first_login column
+
+    @Column(name = "last_login")
+    private Timestamp lastLogin;  // Mapped to last_login column
+
+    // This mapping assumes UserRole has a 'user' field that maps back to this User.
+    // With a composite key in UserRole, this mapping is standard.
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @Builder.Default // Kept from k7qgdy-codex
+    @Builder.Default // Initializes 'roles' with an empty ArrayList if not set by builder
     private List<UserRole> roles = new ArrayList<>();
 
     @PrePersist
     public void onPrePersist() {
-        if (id == null) {
-            id = UUID.randomUUID().toString(); // Kept from k7qgdy-codex
+        if (this.id == null) {
+            this.id = UUID.randomUUID();
         }
     }
 }

@@ -1,22 +1,22 @@
 package com.training.calendar.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "roles")
+@Table(name = "roles") // Ensure your table is named 'roles'
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Role {
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // For auto-incrementing integer IDs
+    private Integer id;
 
-    private String name;
+    @Column(unique = true, nullable = false)
+    private String name; // e.g., "ROLE_USER", "ROLE_ADMIN"
 }

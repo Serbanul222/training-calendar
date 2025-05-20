@@ -9,8 +9,7 @@
         <TrainingCalendar />
       </template>
       <template v-else>
-        <LoginForm @logged-in="onAuth" />
-        <RegisterForm class="mt-4" @registered="onAuth" />
+        <AuthContainer @auth-completed="onAuth" />
       </template>
     </main>
 
@@ -23,8 +22,7 @@
 <script setup>
 import { ref } from 'vue';
 import TrainingCalendar from './components/TrainingCalendar.vue';
-import LoginForm from './components/LoginForm.vue';
-import RegisterForm from './components/RegisterForm.vue';
+import AuthContainer from './components/AuthContainer.vue';
 
 const token = ref(localStorage.getItem('jwt'));
 function onAuth() {
