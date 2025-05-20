@@ -1,5 +1,6 @@
 import { reactive } from 'vue';
 import eventApi from '@/api/eventApi';
+import participantApi from '@/api/participantApi';
 import { TRAINING_CATEGORIES } from '../constants/trainingCategories';
 
 const eventStore = reactive({
@@ -79,7 +80,7 @@ const eventStore = reactive({
 
     try {
       // Ensure data is in the format expected by the backend
-    const eventRequest = {
+      const eventRequest = {
         eventDate: (eventData.eventDate || eventData.date)?.split('T')[0],
         startTime: eventData.startTime || '09:00',
         endTime: eventData.endTime || '17:00',
@@ -228,8 +229,12 @@ const eventStore = reactive({
   const category = TRAINING_CATEGORIES[event.categoryId];
   
   // Format the start and end times for FullCalendar
-  const startDateTime = `${event.eventDate}T${event.startTime}:00`;
-  const endDateTime = `${event.eventDate}T${event.endTime}:00`;
+  // Ensure time strings include seconds but do not double append
+  const normalizeTime = (time) =>
+    time.length === 5 ? `${time}:00` : time;
+
+  const startDateTime = `${event.eventDate}T${normalizeTime(event.startTime)}`;
+  const endDateTime = `${event.eventDate}T${normalizeTime(event.endTime)}`;
   
   // Create the calendar event format
   const calendarEvent = {
@@ -255,6 +260,7 @@ const eventStore = reactive({
     classNames: [event.categoryId],
     display: 'block'
   };
+
     
     // Update title to include time
     const timeDisplay = `${event.startTime} - ${event.endTime}`;
@@ -263,6 +269,14 @@ const eventStore = reactive({
     calendarEvent.title = `${baseName} - ${event.location} (${timeDisplay}, ${event.participants.length}/${event.maxParticipants})`;
     console.log('Formatted event:', calendarEvent);
     return calendarEvent;
+
+  // Include timing and participant information in the title
+  const timeDisplay = `${normalizeTime(event.startTime)} - ${normalizeTime(event.endTime)}`;
+  const participantCount = event.participants ? event.participants.length : 0;
+  calendarEvent.title = `${category?.name || event.categoryId} - ${event.location} (${timeDisplay}, ${participantCount}/${event.maxParticipants})`;
+
+  console.log('Formatted event:', calendarEvent);
+  return calendarEvent;
   }
   
 });
