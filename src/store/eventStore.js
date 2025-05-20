@@ -80,7 +80,8 @@ const eventStore = reactive({
     try {
       // Ensure data is in the format expected by the backend
       const eventRequest = {
-        eventDate: eventData.eventDate || eventData.date,
+        name: eventData.name,
+        eventDate: (eventData.eventDate || eventData.date)?.split('T')[0],
         startTime: eventData.startTime || '09:00',
         endTime: eventData.endTime || '17:00',
         categoryId: eventData.categoryId || eventData.category,
@@ -115,7 +116,8 @@ const eventStore = reactive({
     try {
       // Ensure data is in the format expected by the backend
       const eventRequest = {
-        eventDate: eventData.eventDate || eventData.date,
+        name: eventData.name,
+        eventDate: (eventData.eventDate || eventData.date)?.split('T')[0],
         startTime: eventData.startTime || '09:00',
         endTime: eventData.endTime || '17:00',
         categoryId: eventData.categoryId || eventData.category,
@@ -206,13 +208,12 @@ const eventStore = reactive({
     if (eventIndex < 0 || eventIndex >= this.events.length) return;
     
     const event = this.events[eventIndex];
-    const category = TRAINING_CATEGORIES[event.extendedProps.category];
     const participantsCount = event.extendedProps.participants.length;
     const maxParticipants = event.extendedProps.maxParticipants;
     
     // Update title to include time
     const timeDisplay = `${event.extendedProps.startTime} - ${event.extendedProps.endTime}`;
-    event.title = `${category?.name || event.extendedProps.category} - ${event.extendedProps.location} (${timeDisplay}, ${participantsCount}/${maxParticipants})`;
+    event.title = `${event.extendedProps.name} (${timeDisplay}, ${participantsCount}/${maxParticipants})`;
     
     // Update availability properties
     event.extendedProps.availableSpots = maxParticipants - participantsCount;
@@ -231,7 +232,7 @@ const eventStore = reactive({
   // Create the calendar event format
   const calendarEvent = {
     id: event.id,
-    title: `${category?.name || event.categoryId} - ${event.location}`,
+    title: `${event.name} - ${event.location}`,
     start: startDateTime,
     end: endDateTime,
     allDay: false, // Important: set to false for time-based events
@@ -239,6 +240,7 @@ const eventStore = reactive({
     borderColor: category?.color || '#ccc',
     extendedProps: {
       category: event.categoryId,
+      name: event.name,
       location: event.location,
       startTime: event.startTime,
       endTime: event.endTime,
@@ -255,8 +257,7 @@ const eventStore = reactive({
     // Update title to include time
     const timeDisplay = `${event.startTime} - ${event.endTime}`;
     const participantCount = event.participants ? event.participants.length : 0;
-    calendarEvent.title = `${category?.name || event.categoryId} - ${event.location} (${participantCount}/${event.maxParticipants})`;
-    calendarEvent.title = `${category?.name || event.categoryId} - ${event.location} (${timeDisplay}, ${event.participants.length}/${event.maxParticipants})`;
+    calendarEvent.title = `${event.name} (${timeDisplay}, ${event.participants.length}/${event.maxParticipants})`;
     console.log('Formatted event:', calendarEvent);
     return calendarEvent;
   }

@@ -17,6 +17,8 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventRequest {
+    @NotBlank(message = "Event name is required")
+    private String name;
     @NotNull(message = "Event date is required")
     private LocalDate eventDate;
 
@@ -26,7 +28,6 @@ public class EventRequest {
     @NotNull(message = "End time is required")
     private LocalTime endTime;
 
-    @NotBlank(message = "Category ID is required")
     private String categoryId;
 
     @NotBlank(message = "Location is required")

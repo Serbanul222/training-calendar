@@ -27,6 +27,9 @@ public class Event {
     @Id
     private String id;
 
+    @NotBlank
+    private String name;
+
     @NotNull
     private LocalDate eventDate;
 
@@ -37,7 +40,6 @@ public class Event {
     @NotNull
     private LocalTime endTime;
 
-    @NotBlank
     @Column(name = "category_id")
     private String categoryId;
 

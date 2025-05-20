@@ -62,9 +62,11 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventResponse createEvent(EventRequest eventRequest) {
-        // Validate that category exists
-        if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
-            throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
+        // Validate that category exists if provided
+        if (eventRequest.getCategoryId() != null && !eventRequest.getCategoryId().isEmpty()) {
+            if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
+                throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
+            }
         }
 
         // Validate times
@@ -79,6 +81,7 @@ public class EventServiceImpl implements EventService {
         }
 
         Event event = new Event();
+        event.setName(eventRequest.getName());
         event.setEventDate(eventRequest.getEventDate());
         event.setStartTime(eventRequest.getStartTime());
         event.setEndTime(eventRequest.getEndTime());
@@ -97,9 +100,11 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new EventNotFoundException("Event not found with id: " + id));
 
-        // Validate that category exists
-        if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
-            throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
+        // Validate that category exists if provided
+        if (eventRequest.getCategoryId() != null && !eventRequest.getCategoryId().isEmpty()) {
+            if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
+                throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
+            }
         }
 
         // Validate times
@@ -114,6 +119,7 @@ public class EventServiceImpl implements EventService {
         }
 
         // Update event properties
+        event.setName(eventRequest.getName());
         event.setEventDate(eventRequest.getEventDate());
         event.setStartTime(eventRequest.getStartTime());
         event.setEndTime(eventRequest.getEndTime());
@@ -183,6 +189,7 @@ public class EventServiceImpl implements EventService {
 
         return EventResponse.builder()
                 .id(event.getId())
+                .name(event.getName())
                 .eventDate(event.getEventDate())
                 .startTime(event.getStartTime())
                 .endTime(event.getEndTime())

@@ -16,6 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 public class EventResponse {
     private String id;
+    private String name;
     private LocalDate eventDate;
     private LocalTime startTime;
     private LocalTime endTime;
