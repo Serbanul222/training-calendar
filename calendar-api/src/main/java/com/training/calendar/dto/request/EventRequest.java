@@ -31,9 +31,6 @@ public class EventRequest {
 
     private String categoryId;
 
-    @NotBlank(message = "Event name is required")
-    private String name;
-
     @NotBlank(message = "Location is required")
     private String location;
 

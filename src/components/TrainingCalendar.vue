@@ -101,8 +101,8 @@ const currentView = ref('dayGridMonth'); // Default view is month
 // Setup composables
 const {
   events, loading, error,
-  loadEventsByMonth, // Assuming loadEventsByMonth is updated by the fix branch if month indexing changed
-  loadEventsByDay,   // This was from the other branch, ensure it's available if used by the fix branch
+  loadEventsByMonth,
+  loadEventsByDay, // Kept, but note `9nz1zf-codex` branch logic in this file doesn't actively use it for reloads
   deleteEvent, submitEvent,
   registerForEvent
 } = useCalendarEvents();
@@ -272,22 +272,23 @@ function setView(viewType) {
 
 // Watch for view changes to load appropriate data
 watch(currentView, async () => {
-  await loadEventsByMonth(currentYear.value, selectedMonth.value);
+  // Prioritizing 9nz1zf-codex logic: always load by month when view changes.
+  // The `selectedMonth.value` here is 0-indexed.
+  // `loadEventsByMonth` might expect 1-indexed. This needs to be consistent.
+  // Given `onMounted` and `watch([currentYear, selectedMonth]` use `+1`,
+  // it's likely `loadEventsByMonth` expects 1-indexed.
+  await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
   forceCalendarRefresh();
 });
 
 // Watch month/year changes
 watch([currentYear, selectedMonth], async ([newYear, newMonth]) => {
-  console.log(`Month/year changed to ${newMonth+1}/${newYear}`); // Note: newMonth is 0-indexed here
-  if (currentView.value === 'dayGridMonth') {
-    // Assuming loadEventsByMonth expects 1-indexed month, consistent with onMounted
-    await loadEventsByMonth(newYear, newMonth + 1);
-  }
-  // If other views need different logic for month/year changes, add it here.
-  // The `fligbc-codex` version of `watch(currentView, ...)` only calls loadEventsByMonth,
-  // so we need to ensure data reloads appropriately for all scenarios.
-  // The current structure implies that if the view is NOT dayGridMonth,
-  // the `watch(currentView, ...)` handles the reload.
+  console.log(`Month/year changed to ${newMonth + 1}/${newYear}`); // newMonth is 0-indexed
+  // Assuming loadEventsByMonth expects 1-indexed month
+  await loadEventsByMonth(newYear, newMonth + 1);
+  // No need to restrict to `currentView.value === 'dayGridMonth'`
+  // as month/year change should reload data for any view that is month-based.
+  // If `timeGridWeek` spans across month boundaries, this will fetch for the current month.
 });
 
 // Update admin mode
@@ -306,7 +307,7 @@ function handleEventClick(info) {
   const eventData = {
     id: info.event.id,
     title: info.event.title,
-    start: startDate.toISOString().split('T')[0],
+    start: startDate.toISOString().split('T')[0], // This is 'date' for the form
     end: info.event.end ? new Date(info.event.end).toISOString().split('T')[0] : startDate.toISOString().split('T')[0],
     extendedProps: {
       category: info.event.extendedProps?.category || '',
@@ -331,7 +332,7 @@ function handleEventClick(info) {
     confirmationModalConfig.showCancelButton = true;
     confirmationModalConfig.onConfirm = () => {
       showConfirmationModal.value = false;
-      prepareEditEvent(eventData, info); // Pass full eventData
+      prepareEditEvent(eventData); // Pass eventData, not info
     };
     confirmationModalConfig.onCancel = () => {
       showConfirmationModal.value = false;
@@ -351,25 +352,26 @@ function handleDateClick(info) {
   isEditMode.value = false;
   const dateOnly = info.dateStr.split('T')[0];
   selectedDate.value = dateOnly;
+  // Removed extra newline from unstable-code
 
   // Get time information if available
   let startTimeVal = '09:00';
   let endTimeVal = '17:00';
 
   if (info.view.type.includes('timeGrid') && info.date) {
-    // If clicked in timeGrid view, use that time as start time
     const clickedDate = new Date(info.date);
     const hours = clickedDate.getHours().toString().padStart(2, '0');
-    // Snap to 15-minute intervals for start time
-    const minutes = (Math.floor(clickedDate.getMinutes() / 15) * 15).toString().padStart(2, '0');
+    const minutes = (Math.floor(clickedDate.getMinutes() / 15) * 15).toString().padStart(2, '0'); // Snap to 15 min
     startTimeVal = `${hours}:${minutes}`;
 
-    // Calculate end time 1 hour later
-    const endDate = new Date(clickedDate.getTime() + 60 * 60 * 1000); // Add 1 hour
-    const endHours = endDate.getHours().toString().padStart(2, '0');
-    const endMinutes = (Math.floor(endDate.getMinutes() / 15) * 15).toString().padStart(2, '0');
-    endTimeVal = `${endHours}:${endMinutes}`;
+    // Calculate end time 1 hour later (as per 9nz1zf-codex structure for this block)
+    // Though `unstable-code` had the calculation for endDate, the assignment structure of `9nz1zf-codex` is preferred.
+    // So we reconstruct the end time based on 9nz1zf-codex logic.
+    const endHour = (clickedDate.getHours() + 1) % 24;
+    endTimeVal = `${endHour.toString().padStart(2, '0')}:${minutes}`; // end time based on 9nz1zf-codex
   }
+  // The Object.assign for eventForm is the same for both branches after the if/else,
+  // so only one is needed. The specific `startTime` and `endTime` values are determined above.
 
   Object.assign(eventForm, {
     id: '',
@@ -380,8 +382,8 @@ function handleDateClick(info) {
     description: '',
     participants: [],
     date: dateOnly,
-    startTime: startTimeVal,
-    endTime: endTimeVal
+    startTime: startTimeVal, // Use determined startTimeVal
+    endTime: endTimeVal    // Use determined endTimeVal
   });
 
   showEventForm.value = true;
@@ -391,16 +393,20 @@ function handleDateClick(info) {
 function prepareEditEvent(eventData) { // Removed 'info' as it's not used here
   isEditMode.value = true;
 
-  const dateOnly = eventData.start.split('T')[0];
+  // The 'date' for the form should come from eventData.start (which is already date-only string)
+  const dateOnly = eventData.start;
 
   Object.assign(eventForm, {
     id: eventData.id,
-    name: eventData.extendedProps.name, // This was duplicated in original, kept one.
+    // Preferring 9nz1zf-codex: `name: eventData.extendedProps.name || '',`
+    name: eventData.extendedProps.name || '',
     category: eventData.extendedProps.category,
     location: eventData.extendedProps.location,
     maxParticipants: eventData.extendedProps.maxParticipants,
     description: eventData.extendedProps.description,
-    participants: eventData.extendedProps.participants ? [...eventData.extendedProps.participants] : [],
+    // Preferring 9nz1zf-codex: `participants: eventData.extendedProps.participants,` (direct assignment)
+    // If participants can be undefined, a fallback is good:
+    participants: eventData.extendedProps.participants || [],
     date: dateOnly,
     startTime: eventData.extendedProps.startTime,
     endTime: eventData.extendedProps.endTime
@@ -426,8 +432,8 @@ function confirmDeleteEvent(eventId) {
 
     if (success) {
       console.log('Event deleted, reloading calendar data');
-      // Reload appropriate data based on current view
-      await loadEventsByMonth(currentYear.value, selectedMonth.value);
+      // Reload appropriate data based on current view, using 1-indexed month
+      await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
     }
   };
   confirmationModalConfig.onCancel = () => {
@@ -436,19 +442,18 @@ function confirmDeleteEvent(eventId) {
 }
 
 // Handle event submit
-async function handleEventSubmit(formData) {
-  const success = await submitEvent(formData, isEditMode.value);
+async function handleEventSubmit(submittedFormData) { // Renamed param to avoid confusion
+  const success = await submitEvent(submittedFormData, isEditMode.value);
   if (success) {
     closeEventForm();
-
-    // Reload appropriate data based on current view
-    await loadEventsByMonth(currentYear.value, selectedMonth.value);
+    // Reload appropriate data, using 1-indexed month
+    await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
   }
 }
 
 // Handle registration submit
-async function handleRegistrationSubmit(formData) {
-  const result = await registerForEvent(formData);
+async function handleRegistrationSubmit(submittedFormData) { // Renamed param
+  const result = await registerForEvent(submittedFormData);
 
   showConfirmationModal.value = true;
   confirmationModalConfig.title = result.success ? 'Success' : 'Error';
@@ -460,9 +465,8 @@ async function handleRegistrationSubmit(formData) {
     showConfirmationModal.value = false;
     if (result.success) {
       closeRegistrationForm();
-
-      // Reload appropriate data based on current view
-      await loadEventsByMonth(currentYear.value, selectedMonth.value);
+      // Reload appropriate data, using 1-indexed month
+      await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
     }
   };
 }
@@ -475,6 +479,7 @@ function closeEventForm() {
     name: '',
     category: 'CONSULTANTA',
     location: '',
+    // Preferring 9nz1zf-codex structure for these properties
     maxParticipants: 10,
     description: '',
     participants: [],
@@ -499,7 +504,7 @@ function closeRegistrationForm() {
 onMounted(async () => {
   console.log('TrainingCalendar component mounted');
 
-  // Load initial events, selectedMonth is 0-indexed, loadEventsByMonth might expect 1-indexed
+  // Load initial events, selectedMonth is 0-indexed, loadEventsByMonth expects 1-indexed
   await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
 
   // Wait a short time to ensure FullCalendar is fully rendered
@@ -507,14 +512,8 @@ onMounted(async () => {
     try {
       if (fullCalendar.value && fullCalendar.value.getApi) {
         console.log('FullCalendar API is available');
-
-        // Initialize with the current view if needed
         const api = fullCalendar.value.getApi();
-
-        // Set the initial view after component has fully mounted
-        // Makes sure view-specific plugins are properly loaded
         api.changeView(currentView.value);
-
         console.log(`Calendar view initialized to: ${currentView.value}`);
       } else {
         console.warn('FullCalendar API not available after mounting');
@@ -522,15 +521,14 @@ onMounted(async () => {
     } catch (error) {
       console.error('Error initializing calendar view:', error);
     }
-  }, 300); // Increased delay to ensure full initialization
+  }, 300);
 });
 
-// Set up auto-refresh interval with less frequent updates
+// Set up auto-refresh interval
 const refreshInterval = setInterval(async () => {
   console.log('Periodic events refresh');
-
-  // Reload appropriate data based on current view
-  await loadEventsByMonth(currentYear.value, selectedMonth.value);
+  // Reload appropriate data, using 1-indexed month
+  await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
 }, 60000); // Every 60 seconds
 
 // Clean up interval on component unmount

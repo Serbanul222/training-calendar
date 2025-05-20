@@ -3,14 +3,14 @@
     <div class="modal-container">
       <div class="modal-header">
         <h3>{{ isEditMode ? 'Edit Event' : 'Create New Event' }}</h3>
-        <button @click="$emit('close')" class="close-btn">&times;</button>
+        <button @click="$emit('close')" class="close-btn">×</button>
       </div>
-      
+
       <div class="modal-body">
         <form @submit.prevent="submitForm">
           <div class="form-group">
             <label for="eventName">Event Name:</label>
-
+            <!-- The newline from unstable-code was removed as 9nz1zf-codex didn't have it -->
             <input type="text" id="eventName" v-model="formData.name" required>
           </div>
 
@@ -27,82 +27,82 @@
               </option>
             </select>
           </div>
-          
+
           <div class="form-group">
             <label for="eventLocation">Location:</label>
             <input type="text" id="eventLocation" v-model="formData.location" required>
           </div>
-          
+
           <div class="form-group">
             <label for="eventDate">Date:</label>
-            <input 
-              type="date" 
-              id="eventDate" 
-              v-model="formData.date" 
+            <input
+              type="date"
+              id="eventDate"
+              v-model="formData.date"
               required
               :disabled="datePreselected"
             >
           </div>
-          
+
           <!-- Add time selection fields -->
           <div class="form-row">
             <div class="form-group form-group-half">
               <label for="eventStartTime">Start Time:</label>
-              <input 
-                type="time" 
-                id="eventStartTime" 
-                v-model="formData.startTime" 
+              <input
+                type="time"
+                id="eventStartTime"
+                v-model="formData.startTime"
                 required
                 @change="validateTimes"
               >
             </div>
-            
+
             <div class="form-group form-group-half">
               <label for="eventEndTime">End Time:</label>
-              <input 
-                type="time" 
-                id="eventEndTime" 
-                v-model="formData.endTime" 
+              <input
+                type="time"
+                id="eventEndTime"
+                v-model="formData.endTime"
                 required
                 @change="validateTimes"
               >
             </div>
           </div>
-          
+
           <!-- Time conflict warning -->
           <div v-if="timeConflict" class="form-error">
             <p>This time slot conflicts with another event. Please choose a different time.</p>
           </div>
-          
+
           <div class="form-group">
             <label for="eventMaxParticipants">Max Participants:</label>
-            <input 
-              type="number" 
-              id="eventMaxParticipants" 
-              v-model.number="formData.maxParticipants" 
+            <input
+              type="number"
+              id="eventMaxParticipants"
+              v-model.number="formData.maxParticipants"
               min="1"
               required
             >
           </div>
-          
+
           <div class="form-group">
             <label for="eventDescription">Description:</label>
-            <textarea 
-              id="eventDescription" 
-              v-model="formData.description" 
+            <textarea
+              id="eventDescription"
+              v-model="formData.description"
               rows="3"
             ></textarea>
           </div>
-          
+
           <div v-if="error" class="error-message">{{ error }}</div>
-          
+
           <div class="form-actions">
             <button type="button" @click="$emit('close')" class="btn-cancel">
               Cancel
             </button>
-            <button 
-              type="submit" 
-              class="btn-submit" 
+            <button
+              type="submit"
+              class="btn-submit"
               :disabled="loading || timeConflict"
             >
               {{ isEditMode ? 'Update' : 'Create Event' }}
@@ -154,9 +154,8 @@ const timeConflict = ref(false);
 // Local form data
 const formData = reactive({
   id: '',
-  name: '',
+  name: '', // Kept single 'name' property, assuming the duplicate was an error.
   category: 'CONSULTANTA',
-  name: '',
   location: '',
   date: '',
   startTime: '09:00', // Default start time
@@ -171,40 +170,46 @@ const datePreselected = computed(() => !!props.eventDate);
 
 // Watch for changes in props to update form data
 watch(() => props.eventData, (newValue) => {
-  if (newValue && props.isEditMode) {
+  if (newValue && Object.keys(newValue).length > 0) { // Ensure newValue is not an empty object
     formData.id = newValue.id || '';
-    formData.name = newValue.name || '';
+    formData.name = newValue.name || ''; // Use the single name property
     formData.category = newValue.category || 'CONSULTANTA';
-    formData.name = newValue.name || '';
     formData.location = newValue.location || '';
-    formData.date = newValue.date || props.eventDate;
+    formData.date = newValue.date || (props.isEditMode ? '' : props.eventDate); // Use props.eventDate for new events if available
     formData.startTime = newValue.startTime || '09:00';
     formData.endTime = newValue.endTime || '17:00';
     formData.maxParticipants = newValue.maxParticipants || 10;
     formData.description = newValue.description || '';
     formData.participants = newValue.participants || [];
-    
-    // Check for time conflicts when editing
-    checkForTimeConflicts();
+
+    // If it's a new event and eventDate prop is provided, use it
+    if (!props.isEditMode && props.eventDate) {
+        formData.date = props.eventDate;
+    }
+
+    checkForTimeConflicts(); // Check conflicts when data changes
   } else {
-    // For new events
+    // For new events or if props.eventData is empty
     formData.id = '';
     formData.name = '';
-    formData.category = 'CONSULTANTA';
-    formData.name = '';
+    formData.category = 'CONSULTANTA'; // Default category
     formData.location = '';
-    formData.date = props.eventDate;
+    formData.date = props.eventDate || new Date().toISOString().split('T')[0]; // Default to today if props.eventDate is not set
     formData.startTime = '09:00';
     formData.endTime = '17:00';
     formData.maxParticipants = 10;
     formData.description = '';
     formData.participants = [];
+    timeConflict.value = false; // Reset time conflict for new forms
+    error.value = null; // Reset error for new forms
   }
-}, { immediate: true });
+}, { immediate: true, deep: true }); // Added deep: true for better reactivity with object props
 
 // Watch for changes to date/time fields to check for conflicts
 watch(() => [formData.date, formData.startTime, formData.endTime], () => {
-  checkForTimeConflicts();
+  if (formData.date && formData.startTime && formData.endTime) {
+    checkForTimeConflicts();
+  }
 }, { deep: true });
 
 // Validate that end time is after start time
@@ -212,9 +217,13 @@ function validateTimes() {
   if (formData.startTime && formData.endTime) {
     if (formData.endTime <= formData.startTime) {
       error.value = 'End time must be after start time';
+      timeConflict.value = false; // Not a server conflict, but a validation error
       return false;
     }
-    error.value = null;
+    // Clear only time validation error, not server conflict error
+    if (error.value === 'End time must be after start time') {
+        error.value = null;
+    }
     return true;
   }
   return true;
@@ -222,69 +231,122 @@ function validateTimes() {
 
 // Check for time conflicts with existing events
 async function checkForTimeConflicts() {
-  if (!formData.date || !formData.startTime || !formData.endTime) return;
-  
+  if (!formData.date || !formData.startTime || !formData.endTime) {
+    timeConflict.value = false; // Cannot check if date/time is missing
+    return;
+  }
+  // Basic time validation first
+  if (formData.endTime <= formData.startTime) {
+      timeConflict.value = false; // Not a server conflict
+      // error.value is handled by validateTimes
+      return;
+  }
+
   try {
+    loading.value = true; // Indicate activity
     const hasConflict = await checkTimeConflict(
-      formData.date, 
-      formData.startTime, 
-      formData.endTime, 
+      formData.date,
+      formData.startTime,
+      formData.endTime,
       props.isEditMode ? formData.id : null
     );
-    
+
     timeConflict.value = hasConflict;
     if (hasConflict) {
-      error.value = 'This time slot conflicts with another event';
+      error.value = 'This time slot conflicts with another event.';
     } else {
-      error.value = null;
+      // Clear conflict-specific error, preserve other errors (like time validation)
+      if (error.value === 'This time slot conflicts with another event.') {
+          error.value = null;
+      }
     }
   } catch (err) {
     console.error('Error checking time conflicts:', err);
-  }
-}
-
-// Submit form
-function submitForm() {
-  loading.value = true;
-  error.value = null;
-  
-  try {
-    // Validate form
-    if (!formData.date || !formData.location || !formData.name ||
-        !formData.startTime || !formData.endTime) {
-      error.value = 'Please fill in all required fields';
-      loading.value = false;
-      return;
-    }
-    
-    // Validate times
-    if (!validateTimes()) {
-      loading.value = false;
-      return;
-    }
-    
-    // Check for time conflicts
-    if (timeConflict.value) {
-      error.value = 'Please resolve time conflicts before saving';
-      loading.value = false;
-      return;
-    }
-    
-    emit('submit', { ...formData });
-  } catch (err) {
-    error.value = 'An error occurred. Please try again.';
-    console.error(err);
+    error.value = 'Could not verify time slot. Please try again.'; // Generic error for API failure
   } finally {
     loading.value = false;
   }
 }
 
-// Set initial check for time conflicts when component is mounted
+// Submit form
+async function submitForm() { // Made async to await conflict check if needed
+  loading.value = true;
+  error.value = null;
+
+  try {
+    // Prioritize 9nz1zf-codex order: name, date, location
+    if (!formData.name || !formData.date || !formData.location ||
+        !formData.startTime || !formData.endTime) {
+      error.value = 'Please fill in all required fields.';
+      loading.value = false;
+      return;
+    }
+
+    if (!validateTimes()) {
+      loading.value = false;
+      return;
+    }
+
+    // Re-check conflict right before submit to be sure, especially if auto-check failed or was slow
+    await checkForTimeConflicts();
+    if (timeConflict.value) {
+      error.value = 'This time slot conflicts with another event. Please choose a different time.';
+      loading.value = false;
+      return;
+    }
+
+    emit('submit', { ...formData });
+  } catch (err) {
+    error.value = 'An error occurred while submitting. Please try again.';
+    console.error('Submit error:', err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+// Set initial check for time conflicts when component is mounted or props change that set initial data
 onMounted(() => {
-  if (formData.date && formData.startTime && formData.endTime) {
+  // The watch on props.eventData with immediate: true handles initial setup.
+  // This onMounted might be redundant or could be used for a final check.
+  if (props.show && formData.date && formData.startTime && formData.endTime) {
     checkForTimeConflicts();
   }
 });
+
+// Ensure form data is reset or correctly set when the modal is shown/hidden or mode changes
+watch(() => props.show, (newShowState) => {
+    if (newShowState) {
+        // When modal is shown, re-evaluate initial form data based on current props
+        const currentEventData = props.eventData;
+        if (props.isEditMode && currentEventData && Object.keys(currentEventData).length > 0) {
+            formData.id = currentEventData.id || '';
+            formData.name = currentEventData.name || '';
+            formData.category = currentEventData.category || 'CONSULTANTA';
+            formData.location = currentEventData.location || '';
+            formData.date = currentEventData.date || '';
+            formData.startTime = currentEventData.startTime || '09:00';
+            formData.endTime = currentEventData.endTime || '17:00';
+            formData.maxParticipants = currentEventData.maxParticipants || 10;
+            formData.description = currentEventData.description || '';
+            formData.participants = currentEventData.participants || [];
+        } else { // New event
+            formData.id = '';
+            formData.name = '';
+            formData.category = 'CONSULTANTA';
+            formData.location = '';
+            formData.date = props.eventDate || new Date().toISOString().split('T')[0];
+            formData.startTime = '09:00';
+            formData.endTime = '17:00';
+            formData.maxParticipants = 10;
+            formData.description = '';
+            formData.participants = [];
+        }
+        timeConflict.value = false; // Reset conflict state
+        error.value = null;      // Reset error state
+        checkForTimeConflicts(); // Perform initial conflict check
+    }
+});
+
 </script>
 
 <style scoped>

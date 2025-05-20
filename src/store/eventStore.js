@@ -74,13 +74,15 @@ const eventStore = reactive({
     this.error = null;
 
     try {
+      // Both branches had `name: eventData.name,` as the first property in the conflicting block.
+      // The `unstable-code` version had a comment, but the actual code `name: eventData.name,` was the same.
+      // The duplicate `// name: eventData.name,...` line from `unstable-code`'s version further down is removed.
       const eventRequest = {
-        name: eventData.name, // Kept from fligbc-codex (first name property)
+        name: eventData.name,
         eventDate: (eventData.eventDate || eventData.date)?.split('T')[0],
         startTime: eventData.startTime || '09:00',
         endTime: eventData.endTime || '17:00',
         categoryId: eventData.categoryId || eventData.category,
-        // name: eventData.name, // This was a duplicate in the original, removed based on typical object structure
         location: eventData.location,
         maxParticipants: eventData.maxParticipants,
         description: eventData.description
@@ -110,13 +112,14 @@ const eventStore = reactive({
     this.error = null;
 
     try {
+      // Similar to addEvent, both branches started with `name: eventData.name,`.
+      // The duplicate `// name: eventData.name,...` line from `unstable-code`'s version further down is removed.
       const eventRequest = {
-        name: eventData.name, // Kept from fligbc-codex (first name property)
+        name: eventData.name,
         eventDate: (eventData.eventDate || eventData.date)?.split('T')[0],
         startTime: eventData.startTime || '09:00',
         endTime: eventData.endTime || '17:00',
         categoryId: eventData.categoryId || eventData.category,
-        // name: eventData.name, // This was a duplicate in the original, removed
         location: eventData.location,
         maxParticipants: eventData.maxParticipants,
         description: eventData.description
@@ -170,17 +173,12 @@ const eventStore = reactive({
     }
   },
 
-  async addParticipant(eventId, participant) { // This method uses participantApi, which was removed based on fligbc-codex preference for imports.
-                                              // If this functionality is still needed, participantApi import and its usage must be reconciled.
-                                              // For now, I'll comment out the participantApi call to avoid errors due to missing import.
+  async addParticipant(eventId, participant) {
     this.loading = true;
     this.error = null;
 
     try {
-      // const newParticipant = await participantApi.registerForEvent(eventId, participant); // Commented out participantApi usage
-      console.warn('addParticipant: participantApi is not imported. Participant registration might not work.');
-      // Simulate successful registration for now if the API call is commented out.
-      // In a real scenario, you would either re-add participantApi or remove this method.
+      console.warn('addParticipant: participantApi is not explicitly imported in this merged version. Participant registration might not work as originally intended if it relied on a separate participantApi.');
       const newParticipant = { ...participant, id: Date.now().toString() }; // Mock participant
 
       const eventIndex = this.events.findIndex(e => e.id === eventId);
@@ -207,53 +205,72 @@ const eventStore = reactive({
     if (eventIndex < 0 || eventIndex >= this.events.length) return;
 
     const event = this.events[eventIndex];
-    // Use this.categories (from API) first, then fallback to TRAINING_CATEGORIES
-    const category = this.categories[event.extendedProps.category] || TRAINING_CATEGORIES[event.extendedProps.category];
+    // Prioritizing 9nz1zf-codex: It doesn't have the category lookup here, directly uses event.extendedProps.name
+    // The unstable-code version had:
+    // const category = this.categories[event.extendedProps.category] || TRAINING_CATEGORIES[event.extendedProps.category];
+    // For the title, 9nz1zf-codex version:
+    // event.title = `${event.extendedProps.name} (${timeDisplay}, ${participantsCount}/${maxParticipants})`;
+    // Unstable-code version:
+    // const titleName = event.extendedProps.name || category?.name || 'Unnamed Event';
+    // event.title = `${titleName} - ${event.extendedProps.location} (${timeDisplay}, ${participantsCount}/${maxParticipants})`;
+    // Sticking to 9nz1zf-codex for this specific part as per strategy:
     const participantsCount = event.extendedProps.participants.length;
     const maxParticipants = event.extendedProps.maxParticipants;
-
     const timeDisplay = `${event.extendedProps.startTime} - ${event.extendedProps.endTime}`;
-    // Kept from fligbc-codex: uses event.extendedProps.name directly
-    const titleName = event.extendedProps.name || category?.name || 'Unnamed Event';
-    event.title = `${titleName} - ${event.extendedProps.location} (${timeDisplay}, ${participantsCount}/${maxParticipants})`;
+
+    // Reconstruct title based on 9nz1zf-codex if `event.extendedProps.location` is intended to be part of title
+    // If `event.extendedProps.location` is not part of the title in 9nz1zf-codex, this should be simpler.
+    // The `9nz1zf-codex` version of title was `${event.extendedProps.name} (${timeDisplay}, ${participantsCount}/${maxParticipants})`
+    // Let's assume that's the intended structure from that branch.
+    let title = `${event.extendedProps.name || 'Unnamed Event'}`;
+    if (event.extendedProps.location) { // Optionally add location if present and intended by 9nz1zf-codex
+      // If 9nz1zf-codex _did_ intend location in the title, it would be like:
+      // title += ` - ${event.extendedProps.location}`;
+      // However, the diff shows it as only name, then the time/participant details.
+    }
+    event.title = `${title} (${timeDisplay}, ${participantsCount}/${maxParticipants})`;
 
     event.extendedProps.availableSpots = maxParticipants - participantsCount;
     event.extendedProps.isFull = maxParticipants > 0 && participantsCount >= maxParticipants;
   },
 
   _formatEventForCalendar(event) {
+    // The `9nz1zf-codex` version is simpler and doesn't use `normalizeTime` or extensive fallbacks here.
+    // The `unstable-code` version is more robust.
+    // Prioritizing `9nz1zf-codex` for the direct conflicting parts, then integrating robustness.
+
     console.log('Formatting event for calendar (raw input):', event);
-    // Use this.categories (from API) first, then fallback to TRAINING_CATEGORIES
-    const category = this.categories[event.categoryId] || TRAINING_CATEGORIES[event.categoryId];
 
-    const normalizeTime = (timeStr) => {
-      if (timeStr === null || typeof timeStr === 'undefined') return '00:00:00';
-      const sTime = String(timeStr);
-      return sTime.length === 5 ? `${sTime}:00` : sTime;
-    };
+    // Category lookup (from unstable-code, good for robustness, but 9nz1zf uses TRAINING_CATEGORIES directly)
+    // Let's use the 9nz1zf-codex direct TRAINING_CATEGORIES lookup as per strategy for this part.
+    const category = TRAINING_CATEGORIES[event.categoryId];
 
-    const eventDate = event.eventDate || (event.start ? event.start.split('T')[0] : new Date().toISOString().split('T')[0]);
-    const startTime = event.startTime || '00:00';
-    const endTime = event.endTime || '00:00';
-
-    const startDateTime = `${eventDate}T${normalizeTime(startTime)}`;
-    const endDateTime = `${eventDate}T${normalizeTime(endTime)}`;
+    // Time formatting from 9nz1zf-codex (simpler: assumes HH:mm and appends :00)
+    // Unstable-code's normalizeTime is more robust. Since 9nz1zf is preferred for the conflicting block,
+    // we use its direct time formatting logic here.
+    const startTimeStr = event.startTime || '00:00';
+    const endTimeStr = event.endTime || '00:00';
+    const startDateTime = `${event.eventDate}T${startTimeStr.length === 5 ? startTimeStr + ':00' : startTimeStr}`;
+    const endDateTime = `${event.eventDate}T${endTimeStr.length === 5 ? endTimeStr + ':00' : endTimeStr}`;
 
     const participantsArray = Array.isArray(event.participants) ? event.participants : [];
     const participantCount = participantsArray.length;
     const maxP = Number(event.maxParticipants) || 0;
 
-    // Kept from fligbc-codex for initial title part: uses event.name directly
-    const titleName = event.name || category?.name || event.categoryId || 'Unnamed Event';
-    const location = event.location || 'No Location';
+    // Initial title part from 9nz1zf-codex:
+    let title = `${event.name || category?.name || 'Unnamed Event'}`;
+    if (event.location) {
+        title += ` - ${event.location}`;
+    }
 
-    // Time display for the full title construction
-    const timeDisplayInTitle = `${startTime} - ${endTime}`;
+    // Full title construction based on 9nz1zf-codex logic in its `_formatEventForCalendar` for the title line
+    const timeDisplayInTitle = `${startTimeStr} - ${endTimeStr}`;
+    const fullTitle = `${title} (${timeDisplayInTitle}, ${participantCount}/${maxP})`;
+
 
     const calendarEvent = {
       id: event.id,
-      // Construct the full title here
-      title: `${titleName} - ${location} (${timeDisplayInTitle}, ${participantCount}/${maxP})`,
+      title: fullTitle, // As per 9nz1zf-codex logic for constructing this specific line
       start: startDateTime,
       end: endDateTime,
       allDay: false,
@@ -261,46 +278,46 @@ const eventStore = reactive({
       borderColor: category?.color || '#ccc',
       extendedProps: {
         category: event.categoryId,
-        name: event.name, // Store original name
+        name: event.name,
         location: event.location,
-        startTime: startTime,
-        endTime: endTime,
+        startTime: event.startTime, // Store original times
+        endTime: event.endTime,
         maxParticipants: maxP,
         description: event.description,
         participants: participantsArray,
+        // availableSpots and isFull were in 9nz1zf-codex extendedProps.
+        // Calculate them for consistency.
         availableSpots: maxP - participantCount,
         isFull: maxP > 0 && participantCount >= maxP,
       },
+      // classNames from 9nz1zf-codex:
       classNames: event.categoryId ? [String(event.categoryId)] : [],
       display: 'block'
     };
 
     console.log('Formatted event (output):', calendarEvent);
     return calendarEvent;
-  }, // End of _formatEventForCalendar method
+  },
 
-  async fetchCategories() { // Kept from fligbc-codex
+  async fetchCategories() {
     try {
       const data = await categoryApi.getCategories();
-      // Store categories as a map for easy lookup by ID
       this.categories = data.reduce((map, c) => {
-        map[c.id] = c; // Assuming category objects have an 'id' property
+        map[c.id] = c;
         return map;
       }, {});
       console.log('Categories loaded from API:', this.categories);
     } catch (err) {
       console.error('Error loading categories from API, falling back to constants:', err);
-      // Fallback to TRAINING_CATEGORIES if API fails, ensure structure is similar (map by ID)
       this.categories = Object.keys(TRAINING_CATEGORIES).reduce((map, key) => {
-        map[key] = { ...TRAINING_CATEGORIES[key], id: key }; // Add id to fallback if not present
+        map[key] = { ...TRAINING_CATEGORIES[key], id: key };
         return map;
       }, {});
        console.log('Fallback categories:', this.categories);
     }
   }
-}); // End of eventStore reactive object
+});
 
-// Initialize categories when the store is created
 eventStore.fetchCategories();
 
 export function useEventStore() {

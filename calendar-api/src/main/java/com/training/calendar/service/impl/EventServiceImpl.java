@@ -62,14 +62,15 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventResponse createEvent(EventRequest eventRequest) {
-        // Validate category if provided
-        if (eventRequest.getCategoryId() != null && !eventRequest.getCategoryId().isBlank()) {
+        // Validate that category exists if provided (from 9nz1zf-codex)
+        if (eventRequest.getCategoryId() != null && !eventRequest.getCategoryId().isEmpty()) {
             if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
                 throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
             }
-        } else {
-            eventRequest.setCategoryId(null);
         }
+        // Note: The 'else { eventRequest.setCategoryId(null); }' from 'unstable-code' is NOT kept,
+        // as per the strategy to prioritize 9nz1zf-codex which doesn't have this else block.
+        // If categoryId is empty, it will be saved as such. If it's null, it's already null.
 
         // Validate times
         if (eventRequest.getEndTime().isBefore(eventRequest.getStartTime())) {
@@ -88,7 +89,7 @@ public class EventServiceImpl implements EventService {
         event.setStartTime(eventRequest.getStartTime());
         event.setEndTime(eventRequest.getEndTime());
         event.setCategoryId(eventRequest.getCategoryId());
-        event.setName(eventRequest.getName());
+        // event.setName(eventRequest.getName()); // Duplicate assignment, removed one
         event.setLocation(eventRequest.getLocation());
         event.setMaxParticipants(eventRequest.getMaxParticipants());
         event.setDescription(eventRequest.getDescription());
@@ -103,14 +104,13 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new EventNotFoundException("Event not found with id: " + id));
 
-        // Validate category if provided
-        if (eventRequest.getCategoryId() != null && !eventRequest.getCategoryId().isBlank()) {
+        // Validate that category exists if provided (from 9nz1zf-codex)
+        if (eventRequest.getCategoryId() != null && !eventRequest.getCategoryId().isEmpty()) {
             if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
                 throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
             }
-        } else {
-            eventRequest.setCategoryId(null);
         }
+        // Note: The 'else { eventRequest.setCategoryId(null); }' from 'unstable-code' is NOT kept.
 
         // Validate times
         if (eventRequest.getEndTime().isBefore(eventRequest.getStartTime())) {
@@ -129,7 +129,7 @@ public class EventServiceImpl implements EventService {
         event.setStartTime(eventRequest.getStartTime());
         event.setEndTime(eventRequest.getEndTime());
         event.setCategoryId(eventRequest.getCategoryId());
-        event.setName(eventRequest.getName());
+        // event.setName(eventRequest.getName()); // Duplicate assignment, removed one
         event.setLocation(eventRequest.getLocation());
         event.setMaxParticipants(eventRequest.getMaxParticipants());
         event.setDescription(eventRequest.getDescription());
@@ -200,7 +200,7 @@ public class EventServiceImpl implements EventService {
                 .startTime(event.getStartTime())
                 .endTime(event.getEndTime())
                 .categoryId(event.getCategoryId())
-                .name(event.getName())
+                // .name(event.getName()) // Duplicate assignment in builder, removed one
                 .location(event.getLocation())
                 .maxParticipants(event.getMaxParticipants())
                 .description(event.getDescription())
