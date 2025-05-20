@@ -20,10 +20,6 @@ public class JwtTokenProvider {
     private long jwtExpirationMs;
 
     private Key getSigningKey() {
-        // Ensure the secret key is strong enough for HS256.
-        // The default value is 32 bytes which is good.
-        // If your actual jwtSecret is shorter, this might throw an error
-        // or result in a weaker key depending on the jjwt version.
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
@@ -34,12 +30,11 @@ public class JwtTokenProvider {
                 .setSubject(username)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // HS256 is fine, but consider stronger if needed
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public String getUsername(String token) {
-        // Using the modern parserBuilder() API from unstable-code
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
@@ -50,12 +45,9 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token) {
         try {
-            // Using the modern parserBuilder() API from unstable-code
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
             return true;
-        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) { // Catch more specific exceptions
-            // It's good practice to log this error for debugging purposes
-            // logger.error("Invalid JWT token: {}", e.getMessage());
+        } catch (Exception e) {
             return false;
         }
     }

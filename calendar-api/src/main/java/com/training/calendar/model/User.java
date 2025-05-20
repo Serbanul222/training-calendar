@@ -18,7 +18,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class User {
     @Id
-    private String id;
+    @GeneratedValue
+    private UUID id;
 
     @Column(unique = true)
     private String email;
@@ -31,7 +32,7 @@ public class User {
     @PrePersist
     public void onPrePersist() {
         if (id == null) {
-            id = UUID.randomUUID().toString();
+            id = UUID.randomUUID();
         }
     }
 }
