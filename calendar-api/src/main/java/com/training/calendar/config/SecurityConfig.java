@@ -1,10 +1,10 @@
 package com.training.calendar.config;
 
 import com.training.calendar.security.JwtAuthenticationFilter;
-// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-// Common imports (not part of the resolved conflict block but present in the original snippet)
+import org.springframework.context.annotation.Lazy; // Import @Lazy
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -25,15 +25,13 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
-@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity // Good to have for @PreAuthorize etc.
 public class SecurityConfig {
 
-    // The @Autowired @Lazy field and its associated comment are removed because the necessary imports
-    // (Autowired, Lazy) were on the 'unstable-code' side of the import conflict,
-    // and we are keeping the 'ub30iw-codex' side which did not include these imports for this purpose.
-
-    // This comment was present in the input and not part of a conflict marker. It describes the parameter.
+    // Apply @Lazy to the field that is part of the circular dependency
+    @Lazy
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter; // This is where SecurityConfig needs JwtAuthenticationFilter
     // The jwtAuthenticationFilter parameter here will be the (potentially lazy) bean resolved by Spring
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
@@ -46,9 +44,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                // The ub30iw-codex/implement-user-authentication-and-role-management side was empty here,
-                // so the comment from unstable-code is removed.
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // Uses the method parameter
+                // Use the injected jwtAuthenticationFilter bean
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

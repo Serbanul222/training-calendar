@@ -6,42 +6,46 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-// import java.sql.Timestamp; // Removed as it's from unstable-code
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
-@Table(name = "users")
+@Table(name = "users") // Assumes your DB table is named "users"
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
     @Id
-    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
-    private String id;
+    private UUID id; // App-generated via @PrePersist
 
-    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String email;
 
-    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
     private String password;
 
-    // Fields 'name', 'firstLogin', 'lastLogin' from unstable-code are removed.
+    @Column(name = "first_login")
+    private Timestamp firstLogin; // Mapped to first_login column
 
-    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
-    // @Builder.Default and associated comments from unstable-code are removed.
+    @Column(name = "last_login")
+    private Timestamp lastLogin;  // Mapped to last_login column
+
+    // This mapping assumes UserRole has a 'user' field that maps back to this User.
+    // With a composite key in UserRole, this mapping is standard.
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @Builder.Default // Initializes 'roles' with an empty ArrayList if not set by builder
     private List<UserRole> roles = new ArrayList<>();
 
     @PrePersist
     public void onPrePersist() {
-        // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
-        if (id == null) {
-            id = UUID.randomUUID().toString();
+        if (this.id == null) {
+            this.id = UUID.randomUUID();
         }
     }
 }

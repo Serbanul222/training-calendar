@@ -9,9 +9,7 @@
         <TrainingCalendar />
       </template>
       <template v-else>
-        <!-- Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management -->
-        <LoginForm @logged-in="onAuth" />
-        <RegisterForm class="mt-4" @registered="onAuth" />
+        <AuthContainer @auth-completed="onAuth" />
       </template>
     </main>
 
@@ -24,10 +22,7 @@
 <script setup>
 import { ref } from 'vue';
 import TrainingCalendar from './components/TrainingCalendar.vue';
-// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
-import LoginForm from './components/LoginForm.vue';
-import RegisterForm from './components/RegisterForm.vue';
-// AuthContainer import from unstable-code is removed
+import AuthContainer from './components/AuthContainer.vue';
 
 const token = ref(localStorage.getItem('jwt'));
 function onAuth() {
