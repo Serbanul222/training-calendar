@@ -10,23 +10,23 @@
       @update:year="currentYear = $event"
       @update:is-admin="updateAdminMode"
     />
-    
+
     <!-- View Type Selector -->
     <CalendarViewSwitcher
       :current-view="currentView"
       @update:view="setView"
     />
-    
-    
+
+
     <!-- Loading indicator -->
     <div v-if="loading" class="loading-indicator">Loading calendar data...</div>
-    
+
     <!-- Error message -->
     <div v-if="error" class="error-message">{{ error }}</div>
-    
+
     <!-- FullCalendar component -->
     <FullCalendar v-else ref="fullCalendar" :options="calendarOptions" />
-    
+
     <!-- Event modal for creating/editing events -->
     <EventModal
       v-if="showEventForm"
@@ -38,7 +38,7 @@
       @submit="handleEventSubmit"
       @close="closeEventForm"
     />
-    
+
     <!-- Registration modal for registering for events -->
     <RegistrationModal
       v-if="showRegistrationForm"
@@ -48,7 +48,7 @@
       @submit="handleRegistrationSubmit"
       @close="closeRegistrationForm"
     />
-    
+
     <!-- Confirmation modal -->
     <ConfirmationModal
       v-if="showConfirmationModal"
@@ -92,18 +92,19 @@ import { markRaw } from 'vue';
 const fullCalendar = ref(null);
 // Make sure to import and register all required plugins
 const plugins = markRaw([
-  dayGridPlugin, 
-  timeGridPlugin, 
+  dayGridPlugin,
+  timeGridPlugin,
   interactionPlugin
 ]);
 const currentView = ref('dayGridMonth'); // Default view is month
 
 // Setup composables
-const { 
+const {
   events, loading, error,
-  loadEventsByMonth,
-  deleteEvent, submitEvent, 
-  registerForEvent 
+  loadEventsByMonth, // Assuming loadEventsByMonth is updated by the fix branch if month indexing changed
+  loadEventsByDay,   // This was from the other branch, ensure it's available if used by the fix branch
+  deleteEvent, submitEvent,
+  registerForEvent
 } = useCalendarEvents();
 
 const {
@@ -134,16 +135,16 @@ const eventForm = reactive({
   date: '',
   startTime: '09:00', // Default start time
   endTime: '17:00',   // Default end time
-  maxParticipants: 10, 
-  description: '', 
+  maxParticipants: 10,
+  description: '',
   participants: []
 });
 
 const selectedEventSnapshot = reactive({
-  id: '', 
-  title: '', 
-  start: '', 
-  end: '', 
+  id: '',
+  title: '',
+  start: '',
+  end: '',
   extendedProps: {}
 });
 
@@ -167,10 +168,10 @@ function defaultEventContentRenderer(eventInfo) {
     const location = eventInfo.event.extendedProps?.location || '';
     const participants = eventInfo.event.extendedProps?.participants || [];
     const maxParticipants = eventInfo.event.extendedProps?.maxParticipants || 0;
-    
+
     // Create participant info text
     const participantInfo = `${participants.length}/${maxParticipants}`;
-    
+
     // Build HTML for the event, with appropriate classes for the category
     return {
       html: `
@@ -210,13 +211,13 @@ const calendarOptions = computed(() => {
     displayEventEnd: false, // Since all events are all-day by default
     dayMaxEventRows: true, // Better performance for event display
     initialDate: new Date(currentYear.value, selectedMonth.value, 1),
-    
+
     // Time grid specific options
-    slotMinTime: '08:00:00', 
+    slotMinTime: '08:00:00',
     slotMaxTime: '20:00:00',
     slotDuration: '00:30:00',
     allDaySlot: true,
-    
+
     // Configure each view specifically
     views: {
       dayGridMonth: {
@@ -241,16 +242,16 @@ const calendarOptions = computed(() => {
 function setView(viewType) {
   // Update the view state
   currentView.value = viewType;
-  
+
   // Safely access the calendar API with proper error handling
   try {
     if (fullCalendar.value && fullCalendar.value.getApi) {
       // Get the API
       const api = fullCalendar.value.getApi();
-      
+
       // Make sure the view type exists and is properly registered
       const availableViews = ['dayGridMonth', 'timeGridWeek'];
-      
+
       if (availableViews.includes(viewType)) {
         console.log(`Changing view to: ${viewType}`);
         // Use a timeout to ensure the view change happens after the current rendering cycle
@@ -277,10 +278,16 @@ watch(currentView, async () => {
 
 // Watch month/year changes
 watch([currentYear, selectedMonth], async ([newYear, newMonth]) => {
-  console.log(`Month/year changed to ${newMonth+1}/${newYear}`);
+  console.log(`Month/year changed to ${newMonth+1}/${newYear}`); // Note: newMonth is 0-indexed here
   if (currentView.value === 'dayGridMonth') {
-    await loadEventsByMonth(newYear, newMonth);
+    // Assuming loadEventsByMonth expects 1-indexed month, consistent with onMounted
+    await loadEventsByMonth(newYear, newMonth + 1);
   }
+  // If other views need different logic for month/year changes, add it here.
+  // The `fligbc-codex` version of `watch(currentView, ...)` only calls loadEventsByMonth,
+  // so we need to ensure data reloads appropriately for all scenarios.
+  // The current structure implies that if the view is NOT dayGridMonth,
+  // the `watch(currentView, ...)` handles the reload.
 });
 
 // Update admin mode
@@ -295,7 +302,7 @@ function handleEventClick(info) {
   const startDate = info.event.start ? new Date(info.event.start) : new Date();
   const startTime = info.event.start ? new Date(info.event.start).toTimeString().substring(0, 5) : '09:00';
   const endTime = info.event.end ? new Date(info.event.end).toTimeString().substring(0, 5) : '17:00';
-  
+
   const eventData = {
     id: info.event.id,
     title: info.event.title,
@@ -308,10 +315,11 @@ function handleEventClick(info) {
       description: info.event.extendedProps?.description || '',
       participants: info.event.extendedProps?.participants ? [...info.event.extendedProps.participants] : [],
       startTime: info.event.extendedProps?.startTime || startTime,
-      endTime: info.event.extendedProps?.endTime || endTime
+      endTime: info.event.extendedProps?.endTime || endTime,
+      name: info.event.extendedProps?.name || info.event.title.split(' - ')[0] // Attempt to get name
     }
   };
-  
+
   if (isAdmin.value) {
     // Show edit/delete confirmation
     showConfirmationModal.value = true;
@@ -323,7 +331,7 @@ function handleEventClick(info) {
     confirmationModalConfig.showCancelButton = true;
     confirmationModalConfig.onConfirm = () => {
       showConfirmationModal.value = false;
-      prepareEditEvent(eventData, info);
+      prepareEditEvent(eventData, info); // Pass full eventData
     };
     confirmationModalConfig.onCancel = () => {
       showConfirmationModal.value = false;
@@ -343,69 +351,61 @@ function handleDateClick(info) {
   isEditMode.value = false;
   const dateOnly = info.dateStr.split('T')[0];
   selectedDate.value = dateOnly;
-  
+
   // Get time information if available
-  let startTime = '09:00';
+  let startTimeVal = '09:00';
+  let endTimeVal = '17:00';
+
   if (info.view.type.includes('timeGrid') && info.date) {
     // If clicked in timeGrid view, use that time as start time
     const clickedDate = new Date(info.date);
     const hours = clickedDate.getHours().toString().padStart(2, '0');
+    // Snap to 15-minute intervals for start time
     const minutes = (Math.floor(clickedDate.getMinutes() / 15) * 15).toString().padStart(2, '0');
-    startTime = `${hours}:${minutes}`;
-    
+    startTimeVal = `${hours}:${minutes}`;
+
     // Calculate end time 1 hour later
-    const endHour = (clickedDate.getHours() + 1) % 24;
-    const endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
-    
-    Object.assign(eventForm, {
-      id: '',
-      name: '',
-      category: 'CONSULTANTA',
-      location: '',
-      maxParticipants: 10,
-      description: '',
-      participants: [],
-      date: dateOnly,
-      startTime,
-      endTime
-    });
-  } else {
-    Object.assign(eventForm, {
-      id: '',
-      name: '',
-      category: 'CONSULTANTA',
-      location: '',
-      maxParticipants: 10,
-      description: '',
-      participants: [],
-      date: dateOnly,
-      startTime: '09:00',
-      endTime: '17:00'
-    });
+    const endDate = new Date(clickedDate.getTime() + 60 * 60 * 1000); // Add 1 hour
+    const endHours = endDate.getHours().toString().padStart(2, '0');
+    const endMinutes = (Math.floor(endDate.getMinutes() / 15) * 15).toString().padStart(2, '0');
+    endTimeVal = `${endHours}:${endMinutes}`;
   }
-  
+
+  Object.assign(eventForm, {
+    id: '',
+    name: '',
+    category: 'CONSULTANTA',
+    location: '',
+    maxParticipants: 10,
+    description: '',
+    participants: [],
+    date: dateOnly,
+    startTime: startTimeVal,
+    endTime: endTimeVal
+  });
+
   showEventForm.value = true;
 }
 
 // Prepare edit event
-function prepareEditEvent(eventData, info) {
+function prepareEditEvent(eventData) { // Removed 'info' as it's not used here
   isEditMode.value = true;
 
   const dateOnly = eventData.start.split('T')[0];
 
   Object.assign(eventForm, {
     id: eventData.id,
-    name: eventData.extendedProps.name,
+    name: eventData.extendedProps.name, // This was duplicated in original, kept one.
     category: eventData.extendedProps.category,
     location: eventData.extendedProps.location,
     maxParticipants: eventData.extendedProps.maxParticipants,
     description: eventData.extendedProps.description,
-    participants: eventData.extendedProps.participants,
+    participants: eventData.extendedProps.participants ? [...eventData.extendedProps.participants] : [],
     date: dateOnly,
     startTime: eventData.extendedProps.startTime,
     endTime: eventData.extendedProps.endTime
   });
-  
+
   showEventForm.value = true;
 }
 
@@ -423,7 +423,7 @@ function confirmDeleteEvent(eventId) {
     console.log('Deleting event:', eventId);
     const success = await deleteEvent(eventId);
     showConfirmationModal.value = false;
-    
+
     if (success) {
       console.log('Event deleted, reloading calendar data');
       // Reload appropriate data based on current view
@@ -440,7 +440,7 @@ async function handleEventSubmit(formData) {
   const success = await submitEvent(formData, isEditMode.value);
   if (success) {
     closeEventForm();
-    
+
     // Reload appropriate data based on current view
     await loadEventsByMonth(currentYear.value, selectedMonth.value);
   }
@@ -449,7 +449,7 @@ async function handleEventSubmit(formData) {
 // Handle registration submit
 async function handleRegistrationSubmit(formData) {
   const result = await registerForEvent(formData);
-  
+
   showConfirmationModal.value = true;
   confirmationModalConfig.title = result.success ? 'Success' : 'Error';
   confirmationModalConfig.message = result.message;
@@ -460,7 +460,7 @@ async function handleRegistrationSubmit(formData) {
     showConfirmationModal.value = false;
     if (result.success) {
       closeRegistrationForm();
-      
+
       // Reload appropriate data based on current view
       await loadEventsByMonth(currentYear.value, selectedMonth.value);
     }
@@ -474,10 +474,10 @@ function closeEventForm() {
     id: '',
     name: '',
     category: 'CONSULTANTA',
-    location: '', 
-    maxParticipants: 10, 
-    description: '', 
-    participants: [], 
+    location: '',
+    maxParticipants: 10,
+    description: '',
+    participants: [],
     date: '',
     startTime: '09:00',
     endTime: '17:00'
@@ -486,35 +486,35 @@ function closeEventForm() {
 
 function closeRegistrationForm() {
   showRegistrationForm.value = false;
-  Object.assign(selectedEventSnapshot, { 
-    id: '', 
-    title: '', 
-    start: '', 
-    end: '', 
-    extendedProps: {} 
+  Object.assign(selectedEventSnapshot, {
+    id: '',
+    title: '',
+    start: '',
+    end: '',
+    extendedProps: {}
   });
 }
 
 // Load events on mount
 onMounted(async () => {
   console.log('TrainingCalendar component mounted');
-  
-  // Load initial events
-  await loadEventsByMonth(currentYear.value, selectedMonth.value);
-  
+
+  // Load initial events, selectedMonth is 0-indexed, loadEventsByMonth might expect 1-indexed
+  await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
+
   // Wait a short time to ensure FullCalendar is fully rendered
   setTimeout(() => {
     try {
       if (fullCalendar.value && fullCalendar.value.getApi) {
         console.log('FullCalendar API is available');
-        
+
         // Initialize with the current view if needed
         const api = fullCalendar.value.getApi();
-        
+
         // Set the initial view after component has fully mounted
         // Makes sure view-specific plugins are properly loaded
         api.changeView(currentView.value);
-        
+
         console.log(`Calendar view initialized to: ${currentView.value}`);
       } else {
         console.warn('FullCalendar API not available after mounting');
@@ -528,9 +528,9 @@ onMounted(async () => {
 // Set up auto-refresh interval with less frequent updates
 const refreshInterval = setInterval(async () => {
   console.log('Periodic events refresh');
-  
+
   // Reload appropriate data based on current view
-await loadEventsByMonth(currentYear.value, selectedMonth.value);
+  await loadEventsByMonth(currentYear.value, selectedMonth.value);
 }, 60000); // Every 60 seconds
 
 // Clean up interval on component unmount

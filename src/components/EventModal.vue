@@ -10,16 +10,17 @@
         <form @submit.prevent="submitForm">
           <div class="form-group">
             <label for="eventName">Event Name:</label>
+
             <input type="text" id="eventName" v-model="formData.name" required>
           </div>
 
           <div class="form-group">
             <label for="eventCategory">Category:</label>
-            <select id="eventCategory" v-model="formData.category" required>
+            <select id="eventCategory" v-model="formData.category">
               <option value="" disabled>Select a category</option>
-              <option 
-                v-for="category in categories" 
-                :key="category.id" 
+              <option
+                v-for="category in categories"
+                :key="category.id"
                 :value="category.id"
               >
                 {{ category.name }}
@@ -155,6 +156,7 @@ const formData = reactive({
   id: '',
   name: '',
   category: 'CONSULTANTA',
+  name: '',
   location: '',
   date: '',
   startTime: '09:00', // Default start time
@@ -173,6 +175,7 @@ watch(() => props.eventData, (newValue) => {
     formData.id = newValue.id || '';
     formData.name = newValue.name || '';
     formData.category = newValue.category || 'CONSULTANTA';
+    formData.name = newValue.name || '';
     formData.location = newValue.location || '';
     formData.date = newValue.date || props.eventDate;
     formData.startTime = newValue.startTime || '09:00';
@@ -188,6 +191,7 @@ watch(() => props.eventData, (newValue) => {
     formData.id = '';
     formData.name = '';
     formData.category = 'CONSULTANTA';
+    formData.name = '';
     formData.location = '';
     formData.date = props.eventDate;
     formData.startTime = '09:00';
@@ -246,7 +250,7 @@ function submitForm() {
   
   try {
     // Validate form
-    if (!formData.date || !formData.location || !formData.category || 
+    if (!formData.date || !formData.location || !formData.name ||
         !formData.startTime || !formData.endTime) {
       error.value = 'Please fill in all required fields';
       loading.value = false;

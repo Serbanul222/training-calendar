@@ -4,7 +4,8 @@
  * @property {string} eventDate - Date of the event (YYYY-MM-DD format)
  * @property {string} startTime - Start time of the event (HH:MM format)
  * @property {string} endTime - End time of the event (HH:MM format)
- * @property {string} categoryId - Category identifier
+ * @property {string} [categoryId] - Category identifier (optional)
+ * @property {string} name - Custom event name
  * @property {string} location - Event location
  * @property {number} maxParticipants - Maximum number of participants
  * @property {string} [description] - Optional event description
@@ -18,7 +19,8 @@
  * @property {string} eventDate - Date of the event (YYYY-MM-DD format)
  * @property {string} startTime - Start time of the event (HH:MM format)
  * @property {string} endTime - End time of the event (HH:MM format)
- * @property {string} categoryId - Category identifier
+ * @property {string} [categoryId] - Category identifier (optional)
+ * @property {string} name - Custom event name
  * @property {string} location - Event location
  * @property {number} maxParticipants - Maximum number of participants
  * @property {string} [description] - Optional event description

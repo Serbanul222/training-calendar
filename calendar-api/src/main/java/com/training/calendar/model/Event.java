@@ -40,9 +40,11 @@ public class Event {
     @NotNull
     private LocalTime endTime;
 
-    @NotBlank
     @Column(name = "category_id")
     private String categoryId;
+
+    @NotBlank
+    private String name;
 
     @NotBlank
     private String location;

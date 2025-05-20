@@ -29,8 +29,10 @@ public class EventRequest {
     @NotNull(message = "End time is required")
     private LocalTime endTime;
 
-    @NotBlank(message = "Category ID is required")
     private String categoryId;
+
+    @NotBlank(message = "Event name is required")
+    private String name;
 
     @NotBlank(message = "Location is required")
     private String location;
