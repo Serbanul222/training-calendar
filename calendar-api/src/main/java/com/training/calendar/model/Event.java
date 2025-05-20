@@ -44,9 +44,6 @@ public class Event {
     private String categoryId;
 
     @NotBlank
-    private String name;
-
-    @NotBlank
     private String location;
 
     @Min(1)
