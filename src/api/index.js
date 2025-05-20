@@ -10,6 +10,15 @@ const apiClient = axios.create({
   withCredentials: true // For cookies/credentials if needed
 });
 
+// Attach JWT token if present
+apiClient.interceptors.request.use(config => {
+  const token = localStorage.getItem('jwt');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Add interceptors for handling errors, authentication, etc.
 apiClient.interceptors.response.use(
   response => response,
