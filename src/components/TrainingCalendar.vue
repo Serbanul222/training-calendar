@@ -126,8 +126,9 @@ const isEditMode = ref(false);
 
 // Form data
 const eventForm = reactive({
-  id: '', 
-  category: 'CONSULTANTA', 
+  id: '',
+  category: 'CONSULTANTA',
+  name: '',
   location: '',
   date: '',
   startTime: '09:00', // Default start time
@@ -374,6 +375,7 @@ function handleDateClick(info) {
     Object.assign(eventForm, {
       id: '',
       category: 'CONSULTANTA',
+      name: '',
       location: '',
       maxParticipants: 10,
       description: '',
@@ -386,6 +388,7 @@ function handleDateClick(info) {
     Object.assign(eventForm, {
       id: '',
       category: 'CONSULTANTA',
+      name: '',
       location: '',
       maxParticipants: 10,
       description: '',
@@ -408,6 +411,7 @@ function prepareEditEvent(eventData, info) {
   Object.assign(eventForm, {
     id: eventData.id,
     category: eventData.extendedProps.category,
+    name: eventData.extendedProps.name,
     location: eventData.extendedProps.location,
     maxParticipants: eventData.extendedProps.maxParticipants,
     description: eventData.extendedProps.description,
@@ -499,12 +503,13 @@ async function handleRegistrationSubmit(formData) {
 // Close modals
 function closeEventForm() {
   showEventForm.value = false;
-  Object.assign(eventForm, { 
-    id: '', 
-    category: 'CONSULTANTA', 
-    location: '', 
-    maxParticipants: 10, 
-    description: '', 
+  Object.assign(eventForm, {
+    id: '',
+    category: 'CONSULTANTA',
+    name: '',
+    location: '',
+    maxParticipants: 10,
+    description: '',
     participants: [], 
     date: '',
     startTime: '09:00',

@@ -62,9 +62,13 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventResponse createEvent(EventRequest eventRequest) {
-        // Validate that category exists
-        if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
-            throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
+        // Validate category if provided
+        if (eventRequest.getCategoryId() != null && !eventRequest.getCategoryId().isBlank()) {
+            if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
+                throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
+            }
+        } else {
+            eventRequest.setCategoryId(null);
         }
 
         // Validate times
@@ -83,6 +87,7 @@ public class EventServiceImpl implements EventService {
         event.setStartTime(eventRequest.getStartTime());
         event.setEndTime(eventRequest.getEndTime());
         event.setCategoryId(eventRequest.getCategoryId());
+        event.setName(eventRequest.getName());
         event.setLocation(eventRequest.getLocation());
         event.setMaxParticipants(eventRequest.getMaxParticipants());
         event.setDescription(eventRequest.getDescription());
@@ -97,9 +102,13 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new EventNotFoundException("Event not found with id: " + id));
 
-        // Validate that category exists
-        if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
-            throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
+        // Validate category if provided
+        if (eventRequest.getCategoryId() != null && !eventRequest.getCategoryId().isBlank()) {
+            if (!categoryRepository.existsById(eventRequest.getCategoryId())) {
+                throw new CategoryNotFoundException("Category not found with id: " + eventRequest.getCategoryId());
+            }
+        } else {
+            eventRequest.setCategoryId(null);
         }
 
         // Validate times
@@ -118,6 +127,7 @@ public class EventServiceImpl implements EventService {
         event.setStartTime(eventRequest.getStartTime());
         event.setEndTime(eventRequest.getEndTime());
         event.setCategoryId(eventRequest.getCategoryId());
+        event.setName(eventRequest.getName());
         event.setLocation(eventRequest.getLocation());
         event.setMaxParticipants(eventRequest.getMaxParticipants());
         event.setDescription(eventRequest.getDescription());
@@ -187,6 +197,7 @@ public class EventServiceImpl implements EventService {
                 .startTime(event.getStartTime())
                 .endTime(event.getEndTime())
                 .categoryId(event.getCategoryId())
+                .name(event.getName())
                 .location(event.getLocation())
                 .maxParticipants(event.getMaxParticipants())
                 .description(event.getDescription())
