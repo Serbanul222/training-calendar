@@ -74,77 +74,92 @@ const eventStore = reactive({
   },
 
   async addEvent(eventData) {
-    this.loading = true;
-    this.error = null;
+  this.loading = true;
+  this.error = null;
 
-    try {
-      // Ensure data is in the format expected by the backend
-      const eventRequest = {
-        eventDate: eventData.eventDate || eventData.date,
-        startTime: eventData.startTime || '09:00',
-        endTime: eventData.endTime || '17:00',
-        categoryId: eventData.categoryId || eventData.category,
-        location: eventData.location,
-        maxParticipants: eventData.maxParticipants,
-        description: eventData.description
-      };
-      
-      console.log('Creating event:', eventRequest);
-      const newEvent = await eventApi.createEvent(eventRequest);
-      
-      const formattedEvent = this._formatEventForCalendar(newEvent);
-      this.events.push(formattedEvent);
-      
-      return formattedEvent;
-    } catch (error) {
-      console.error('Error adding event:', error);
-      this.error = 'Failed to add event';
-      if (error.response?.status === 409) {
-        this.error = 'Time conflict with existing event';
-      }
-      throw error;
-    } finally {
-      this.loading = false;
+  try {
+    // Ensure proper date format - strip time component if present
+    let eventDate = eventData.eventDate || eventData.date;
+    // Ensure date is in YYYY-MM-DD format
+    if (eventDate && eventDate.includes('T')) {
+      eventDate = eventDate.split('T')[0];
     }
-  },
+
+    // Ensure data is in the format expected by the backend
+    const eventRequest = {
+      eventDate: eventDate,
+      startTime: eventData.startTime || '09:00',
+      endTime: eventData.endTime || '17:00',
+      categoryId: eventData.categoryId || eventData.category,
+      location: eventData.location,
+      maxParticipants: eventData.maxParticipants,
+      description: eventData.description
+    };
+    
+    console.log('Creating event:', eventRequest);
+    const newEvent = await eventApi.createEvent(eventRequest);
+    
+    const formattedEvent = this._formatEventForCalendar(newEvent);
+    this.events.push(formattedEvent);
+    
+    return formattedEvent;
+  } catch (error) {
+    console.error('Error adding event:', error);
+    this.error = 'Failed to add event';
+    if (error.response?.status === 409) {
+      this.error = 'Time conflict with existing event';
+    }
+    throw error;
+  } finally {
+    this.loading = false;
+  }
+},
+
 
   async updateEvent(eventData) {
-    this.loading = true;
-    this.error = null;
+  this.loading = true;
+  this.error = null;
 
-    try {
-      // Ensure data is in the format expected by the backend
-      const eventRequest = {
-        eventDate: eventData.eventDate || eventData.date,
-        startTime: eventData.startTime || '09:00',
-        endTime: eventData.endTime || '17:00',
-        categoryId: eventData.categoryId || eventData.category,
-        location: eventData.location,
-        maxParticipants: eventData.maxParticipants,
-        description: eventData.description
-      };
-      
-      console.log('Updating event:', eventData.id, eventRequest);
-      const updatedEvent = await eventApi.updateEvent(eventData.id, eventRequest);
-      
-      const formattedEvent = this._formatEventForCalendar(updatedEvent);
-      const index = this.events.findIndex(event => event.id === eventData.id);
-      if (index !== -1) {
-        this.events[index] = formattedEvent;
-      }
-      
-      return formattedEvent;
-    } catch (error) {
-      console.error('Error updating event:', error);
-      this.error = 'Failed to update event';
-      if (error.response?.status === 409) {
-        this.error = 'Time conflict with existing event';
-      }
-      throw error;
-    } finally {
-      this.loading = false;
+  try {
+    // Ensure proper date format - strip time component if present
+    let eventDate = eventData.eventDate || eventData.date;
+    // Ensure date is in YYYY-MM-DD format
+    if (eventDate && eventDate.includes('T')) {
+      eventDate = eventDate.split('T')[0];
     }
-  },
+
+    // Ensure data is in the format expected by the backend
+    const eventRequest = {
+      eventDate: eventDate,
+      startTime: eventData.startTime || '09:00',
+      endTime: eventData.endTime || '17:00',
+      categoryId: eventData.categoryId || eventData.category,
+      location: eventData.location,
+      maxParticipants: eventData.maxParticipants,
+      description: eventData.description
+    };
+    
+    console.log('Updating event:', eventData.id, eventRequest);
+    const updatedEvent = await eventApi.updateEvent(eventData.id, eventRequest);
+    
+    const formattedEvent = this._formatEventForCalendar(updatedEvent);
+    const index = this.events.findIndex(event => event.id === eventData.id);
+    if (index !== -1) {
+      this.events[index] = formattedEvent;
+    }
+    
+    return formattedEvent;
+  } catch (error) {
+    console.error('Error updating event:', error);
+    this.error = 'Failed to update event';
+    if (error.response?.status === 409) {
+      this.error = 'Time conflict with existing event';
+    }
+    throw error;
+  } finally {
+    this.loading = false;
+  }
+},
 
   async deleteEvent(id) {
     this.loading = true;

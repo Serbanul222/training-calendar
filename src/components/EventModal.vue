@@ -258,7 +258,17 @@ function submitForm() {
       return;
     }
     
-    emit('submit', { ...formData });
+    // Ensure date is in YYYY-MM-DD format without time component
+    // This is critical for the API which expects LocalDate
+    const formattedDate = formData.date.split('T')[0];
+    
+    // Create a new object with the formatted date
+    const eventToSubmit = {
+      ...formData,
+      date: formattedDate,
+    };
+    
+    emit('submit', eventToSubmit);
   } catch (err) {
     error.value = 'An error occurred. Please try again.';
     console.error(err);
@@ -266,6 +276,7 @@ function submitForm() {
     loading.value = false;
   }
 }
+
 
 // Set initial check for time conflicts when component is mounted
 onMounted(() => {

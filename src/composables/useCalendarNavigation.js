@@ -26,28 +26,30 @@ export default function useCalendarNavigation(calendarRef) {
 
   // Force calendar to refresh
   const forceCalendarRefresh = () => {
-    try {
-      console.log('Forcing calendar refresh');
-      if (!calendarRef.value || !calendarRef.value.getApi) {
-        console.warn('Calendar API not available for refresh');
-        return;
-      }
-      
-      const api = calendarRef.value.getApi();
-      if (api) {
-        // Force rerender
-        api.refetchEvents();
-        
-        // Make sure the view is up to date
-        const shouldBeView = api.view.type;
-        api.changeView(shouldBeView);
-        
-        console.log('Calendar refresh complete');
-      }
-    } catch (error) {
-      console.error('Error during calendar refresh:', error);
+  try {
+    console.log('Forcing calendar refresh');
+    if (!calendarRef.value || !calendarRef.value.getApi) {
+      console.warn('Calendar API not available for refresh');
+      return;
     }
-  };
+    
+    const api = calendarRef.value.getApi();
+    if (api) {
+      // Force a complete rerender by:
+      // 1. Refetching all events
+      api.refetchEvents();
+      
+      // 2. Force redraw with current view
+      const currentViewType = api.view.type;
+      setTimeout(() => {
+        api.changeView(currentViewType);
+        console.log('Calendar refresh complete');
+      }, 100);
+    }
+  } catch (error) {
+    console.error('Error during calendar refresh:', error);
+  }
+};
 
   // Update calendar editable options
   const updateCalendarEditableOptions = (calendarRef, isAdmin) => {

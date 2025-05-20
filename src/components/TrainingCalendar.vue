@@ -355,45 +355,48 @@ function handleDateClick(info) {
   if (!isAdmin.value) return;
   
   isEditMode.value = false;
-  selectedDate.value = info.dateStr;
+  
+  // Normalize the date format regardless of view type 
+  // Always store just the date part in YYYY-MM-DD format
+  let clickedDate;
+  if (info.dateStr && info.dateStr.includes('T')) {
+    // If in timeGrid view, the date will include time
+    clickedDate = info.dateStr.split('T')[0];
+  } else {
+    // In month view, dateStr is already in YYYY-MM-DD format
+    clickedDate = info.dateStr;
+  }
+  
+  selectedDate.value = clickedDate;
   
   // Get time information if available
   let startTime = '09:00';
+  let endTime = '17:00';
+  
   if (info.view.type.includes('timeGrid') && info.date) {
     // If clicked in timeGrid view, use that time as start time
-    const clickedDate = new Date(info.date);
-    const hours = clickedDate.getHours().toString().padStart(2, '0');
-    const minutes = (Math.floor(clickedDate.getMinutes() / 15) * 15).toString().padStart(2, '0');
+    const clickedDateTime = new Date(info.date);
+    const hours = clickedDateTime.getHours().toString().padStart(2, '0');
+    const minutes = (Math.floor(clickedDateTime.getMinutes() / 15) * 15).toString().padStart(2, '0');
     startTime = `${hours}:${minutes}`;
     
     // Calculate end time 1 hour later
-    const endHour = (clickedDate.getHours() + 1) % 24;
-    const endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
-    
-    Object.assign(eventForm, {
-      id: '', 
-      category: 'CONSULTANTA', 
-      location: '',
-      maxParticipants: 10, 
-      description: '', 
-      participants: [], 
-      date: info.dateStr,
-      startTime,
-      endTime
-    });
-  } else {
-    Object.assign(eventForm, {
-      id: '', 
-      category: 'CONSULTANTA', 
-      location: '',
-      maxParticipants: 10, 
-      description: '', 
-      participants: [], 
-      date: info.dateStr,
-      startTime: '09:00',
-      endTime: '17:00'
-    });
+    const endHour = (clickedDateTime.getHours() + 1) % 24;
+    endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
   }
+  
+  // Reset form data with the correct values
+  Object.assign(eventForm, {
+    id: '', 
+    category: 'CONSULTANTA', 
+    location: '',
+    maxParticipants: 10, 
+    description: '', 
+    participants: [], 
+    date: clickedDate,
+    startTime,
+    endTime
+  });
   
   showEventForm.value = true;
 }
