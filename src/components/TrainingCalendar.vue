@@ -353,9 +353,10 @@ function handleEventClick(info) {
 // Handle clicking on a date
 function handleDateClick(info) {
   if (!isAdmin.value) return;
-  
+
   isEditMode.value = false;
-  selectedDate.value = info.dateStr;
+  const dateOnly = info.dateStr.split('T')[0];
+  selectedDate.value = dateOnly;
   
   // Get time information if available
   let startTime = '09:00';
@@ -371,25 +372,25 @@ function handleDateClick(info) {
     const endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
     
     Object.assign(eventForm, {
-      id: '', 
-      category: 'CONSULTANTA', 
+      id: '',
+      category: 'CONSULTANTA',
       location: '',
-      maxParticipants: 10, 
-      description: '', 
-      participants: [], 
-      date: info.dateStr,
+      maxParticipants: 10,
+      description: '',
+      participants: [],
+      date: dateOnly,
       startTime,
       endTime
     });
   } else {
     Object.assign(eventForm, {
-      id: '', 
-      category: 'CONSULTANTA', 
+      id: '',
+      category: 'CONSULTANTA',
       location: '',
-      maxParticipants: 10, 
-      description: '', 
-      participants: [], 
-      date: info.dateStr,
+      maxParticipants: 10,
+      description: '',
+      participants: [],
+      date: dateOnly,
       startTime: '09:00',
       endTime: '17:00'
     });
@@ -401,7 +402,9 @@ function handleDateClick(info) {
 // Prepare edit event
 function prepareEditEvent(eventData, info) {
   isEditMode.value = true;
-  
+
+  const dateOnly = eventData.start.split('T')[0];
+
   Object.assign(eventForm, {
     id: eventData.id,
     category: eventData.extendedProps.category,
@@ -409,7 +412,7 @@ function prepareEditEvent(eventData, info) {
     maxParticipants: eventData.extendedProps.maxParticipants,
     description: eventData.extendedProps.description,
     participants: eventData.extendedProps.participants,
-    date: eventData.start,
+    date: dateOnly,
     startTime: eventData.extendedProps.startTime,
     endTime: eventData.extendedProps.endTime
   });
