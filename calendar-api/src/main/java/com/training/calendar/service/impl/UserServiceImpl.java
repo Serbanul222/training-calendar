@@ -3,6 +3,7 @@ package com.training.calendar.service.impl;
 import com.training.calendar.model.Role;
 import com.training.calendar.model.User;
 import com.training.calendar.model.UserRole;
+// import com.training.calendar.model.UserRoleId; // Removed as it's from unstable-code
 import com.training.calendar.repository.RoleRepository;
 import com.training.calendar.repository.UserRepository;
 import com.training.calendar.repository.UserRoleRepository;
@@ -16,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// import java.sql.Timestamp; // Removed
+// import java.time.Instant; // Removed
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -31,6 +34,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
     public User registerUser(String email, String password) {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new IllegalArgumentException("Email already registered");
@@ -64,6 +68,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username)
+                // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         List<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(ur -> new SimpleGrantedAuthority(ur.getRole().getName()))

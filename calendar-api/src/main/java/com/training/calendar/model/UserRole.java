@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
 import java.util.UUID;
 
 @Entity
@@ -15,6 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserRole {
+    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
     @Id
     private String id;
 
