@@ -41,6 +41,19 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default // Initializes 'roles' with an empty ArrayList if not set by builder
     private List<UserRole> roles = new ArrayList<>();
+    
+    /**
+     * Ensures the roles list is never null.
+     * This prevents NullPointerException when working with the roles collection.
+     * 
+     * @return List of UserRole objects, never null
+     */
+    public List<UserRole> getRoles() {
+        if (roles == null) {
+            roles = new ArrayList<>();
+        }
+        return roles;
+    }
 
     @PrePersist
     public void onPrePersist() {

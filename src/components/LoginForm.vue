@@ -11,7 +11,7 @@
             id="email"
             v-model="email" 
             type="email" 
-            placeholder="Your email address" 
+            placeholder="Your @lensa.ro email address" 
             required
             autocomplete="email"
           />
@@ -67,8 +67,25 @@ async function handleSubmit() {
   loading.value = true;
   error.value = '';
   
+  // Basic client-side validation
+  if (!email.value.trim()) {
+    error.value = 'Please enter your email address.';
+    loading.value = false;
+    return;
+  }
+  if (!email.value.trim().endsWith('@lensa.ro')) {
+    error.value = 'Email must be a lensa.ro email address.';
+    loading.value = false;
+    return;
+  }
+  if (!password.value) {
+    error.value = 'Please enter your password.';
+    loading.value = false;
+    return;
+  }
+  
   try {
-    const { token } = await authApi.login(email.value, password.value);
+    const { token } = await authApi.login({ email: email.value, password: password.value });
     localStorage.setItem('jwt', token);
     emit('logged-in');
   } catch (e) {

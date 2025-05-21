@@ -28,13 +28,14 @@ import java.util.List;
 @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity // Good to have for @PreAuthorize etc.
 public class SecurityConfig {
 
-    // Apply @Lazy to the field that is part of the circular dependency
-    @Lazy
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter; // This is where SecurityConfig needs JwtAuthenticationFilter
-    // The jwtAuthenticationFilter parameter here will be the (potentially lazy) bean resolved by Spring
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(@Lazy JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)

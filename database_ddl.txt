@@ -1,0 +1,101 @@
+-- public.users definition
+
+-- Drop table
+
+-- DROP TABLE public.users;
+
+CREATE TABLE public.users (
+	id uuid NOT NULL,
+	email varchar(255) NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"password" varchar(255) NOT NULL,
+	first_login timestamp NULL,
+	last_login timestamp NULL,
+	CONSTRAINT users_email_check CHECK (((email)::text ~~ '%@lensa.ro'::text)),
+	CONSTRAINT users_email_key UNIQUE (email),
+	CONSTRAINT users_pkey PRIMARY KEY (id)
+);
+
+
+
+CREATE TABLE public.user_roles (
+	user_id uuid NOT NULL,
+	role_id int4 NOT NULL,
+	CONSTRAINT user_roles_pkey PRIMARY KEY (user_id, role_id),
+	CONSTRAINT fk_role_in_user_roles FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE CASCADE,
+	CONSTRAINT fk_user_in_user_roles FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
+);
+
+-- public.roles definition
+
+-- Drop table
+
+-- DROP TABLE public.roles;
+
+CREATE TABLE public.roles (
+	id serial4 NOT NULL,
+	"name" varchar(255) NOT NULL,
+	CONSTRAINT roles_name_key UNIQUE (name),
+	CONSTRAINT roles_pkey PRIMARY KEY (id)
+);
+
+
+-- public.participants definition
+
+-- Drop table
+
+-- DROP TABLE public.participants;
+
+CREATE TABLE public.participants (
+	id varchar(255) NOT NULL,
+	participant_email varchar(255) NOT NULL,
+	participant_name varchar(255) NULL,
+	manager_email varchar(255) NOT NULL,
+	"location" varchar(255) NOT NULL,
+	event_id varchar(255) NOT NULL,
+	created_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT participants_pkey PRIMARY KEY (id),
+	CONSTRAINT participants_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_participants_email ON public.participants USING btree (participant_email);
+CREATE INDEX idx_participants_event ON public.participants USING btree (event_id);
+
+
+-- public.events definition
+
+-- Drop table
+
+-- DROP TABLE public.events;
+
+CREATE TABLE public.events (
+	id varchar(255) NOT NULL,
+	event_date date NOT NULL,
+	category_id varchar(255) NOT NULL,
+	"location" varchar(255) NOT NULL,
+	max_participants int4 NOT NULL,
+	description varchar(255) NULL,
+	end_time time NULL,
+	start_time time NULL,
+	"name" varchar(255) NULL,
+	CONSTRAINT events_max_participants_check CHECK ((max_participants > 0)),
+	CONSTRAINT events_pkey PRIMARY KEY (id),
+	CONSTRAINT events_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id)
+);
+CREATE INDEX idx_events_category ON public.events USING btree (category_id);
+CREATE INDEX idx_events_date ON public.events USING btree (event_date);
+
+
+-- public.categories definition
+
+-- Drop table
+
+-- DROP TABLE public.categories;
+
+CREATE TABLE public.categories (
+	id varchar(255) NOT NULL,
+	"name" varchar(255) NOT NULL,
+	color varchar(255) NOT NULL,
+	back_color varchar(255) NOT NULL,
+	CONSTRAINT categories_pkey PRIMARY KEY (id)
+);
+

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,6 +39,10 @@ public class UserServiceImpl implements UserService {
         // CHECK 1: Email already registered?
         if (userRepository.findByEmail(email).isPresent()) {
             throw new IllegalArgumentException("Email already registered");
+        }
+        // CHECK 1.5: Email format check for lensa.ro domain
+        if (!email.endsWith("@lensa.ro")) {
+            throw new IllegalArgumentException("Email must be a lensa.ro email address");
         }
         // CHECK 2: Name empty?
         if (name == null || name.trim().isEmpty()) {
@@ -80,6 +85,9 @@ public class UserServiceImpl implements UserService {
         userRoleRepository.save(userRoleLink);
 
         // 6. Add the UserRoleLink to the savedUser's collection
+        if (savedUser.getRoles() == null) {
+            savedUser.setRoles(new ArrayList<>());
+        }
         savedUser.getRoles().add(userRoleLink);
 
         return savedUser;

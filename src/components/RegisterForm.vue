@@ -26,7 +26,7 @@
             id="email"
             v-model="email"
             type="email" 
-            placeholder="Your email address" 
+            placeholder="Your @lensa.ro email address" 
             required
             autocomplete="email"
           />
@@ -92,6 +92,11 @@ async function handleSubmit() {
   }
   if (!email.value.trim()) {
     error.value = 'Please enter your email address.';
+    loading.value = false;
+    return;
+  }
+  if (!email.value.trim().endsWith('@lensa.ro')) {
+    error.value = 'Email must be a lensa.ro email address.';
     loading.value = false;
     return;
   }
