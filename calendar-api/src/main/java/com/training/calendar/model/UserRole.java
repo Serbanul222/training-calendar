@@ -3,29 +3,33 @@ package com.training.calendar.model;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.EqualsAndHashCode;
+
 @Entity
 @Table(name = "user_roles")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"user", "role"})  // Exclude user and role from toString
+@EqualsAndHashCode(of = "id")          // Only use id for equals/hashCode
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserRole {
 
-    @EmbeddedId // Marks this field as an embedded composite primary key
+    @EmbeddedId
     private UserRoleId id;
 
-    @ManyToOne(fetch = FetchType.LAZY) // LAZY is generally better for *-to-one from a join entity
-    @MapsId("userId") // Specifies that 'userId' field of UserRoleId maps to this User association
-    @JoinColumn(name = "user_id") // DB column name
+    @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("userId")
+    @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("roleId") // Specifies that 'roleId' field of UserRoleId maps to this Role association
-    @JoinColumn(name = "role_id") // DB column name
+    @ManyToOne(fetch = FetchType.EAGER)
+    @MapsId("roleId")
+    @JoinColumn(name = "role_id")
     private Role role;
-
-    // The @PrePersist for a separate 'id' is no longer needed
-    // as the ID is now composite and derived from User and Role.
 }

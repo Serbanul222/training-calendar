@@ -3,7 +3,7 @@ package com.training.calendar.service.impl;
 import com.training.calendar.model.Role;
 import com.training.calendar.model.User;
 import com.training.calendar.model.UserRole;
-import com.training.calendar.model.UserRoleId; // Import the composite key class
+import com.training.calendar.model.UserRoleId;
 import com.training.calendar.repository.RoleRepository;
 import com.training.calendar.repository.UserRepository;
 import com.training.calendar.repository.UserRoleRepository;
@@ -49,48 +49,43 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Name cannot be empty");
         }
 
-        // 1. Prepare the User entity
-        User newUser = User.builder()
-                .email(email)
-                .name(name)
-                .password(passwordEncoder.encode(password))
-                .firstLogin(Timestamp.from(Instant.now()))
-                // .lastLogin(Timestamp.from(Instant.now()))
-                .build();
-        // @PrePersist in User.java will set its UUID id
+        try {
+            // 1. Create the User
+            User newUser = User.builder()
+                    .email(email)
+                    .name(name)
+                    .password(passwordEncoder.encode(password))
+                    .firstLogin(Timestamp.from(Instant.now()))
+                    .build();
 
-        // 2. Save the User entity
-        User savedUser = userRepository.save(newUser);
+            // PrePersist will set the UUID
+            User savedUser = userRepository.save(newUser);
 
-        // 3. Find or create the Role
-        Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseGet(() -> {
-                    Role newRole = Role.builder().name("ROLE_USER").build();
-                    // Assuming Role.id is Integer and auto-generated (IDENTITY strategy)
-                    return roleRepository.save(newRole);
-                });
+            // 2. Find or create the Role
+            Role userRole = roleRepository.findByName("ROLE_USER")
+                    .orElseGet(() -> {
+                        Role newRole = Role.builder().name("ROLE_USER").build();
+                        return roleRepository.save(newRole);
+                    });
 
-        // 4. Create the composite ID for UserRole
-        // Potential NullPointerException here if savedUser.getId() or userRole.getId() is null
-        // savedUser.getId() should be populated by @PrePersist before save, or by DB after save if DB generated.
-        // userRole.getId() should be populated by DB after roleRepository.save(newRole).
-        UserRoleId userRoleId = new UserRoleId(savedUser.getId(), userRole.getId());
+            // 3. Create the UserRole join record
+            UserRoleId userRoleId = new UserRoleId(savedUser.getId(), userRole.getId());
 
-        // 5. Create and save the UserRole (join table entry)
-        UserRole userRoleLink = UserRole.builder()
-                .id(userRoleId)
-                .user(savedUser)
-                .role(userRole)
-                .build();
-        userRoleRepository.save(userRoleLink);
+            UserRole userRoleLink = UserRole.builder()
+                    .id(userRoleId)
+                    .user(savedUser)
+                    .role(userRole)
+                    .build();
 
-        // 6. Add the UserRoleLink to the savedUser's collection
-        if (savedUser.getRoles() == null) {
-            savedUser.setRoles(new ArrayList<>());
+            userRoleRepository.save(userRoleLink);
+
+            return savedUser;
+
+        } catch (Exception e) {
+            System.err.println("Error in registerUser: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-        savedUser.getRoles().add(userRoleLink);
-
-        return savedUser;
     }
 
     @Override
@@ -99,12 +94,30 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true) // Add @Transactional here to keep session open
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
-        List<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(ur -> new SimpleGrantedAuthority(ur.getRole().getName()))
-                .collect(Collectors.toList());
+
+        List<GrantedAuthority> authorities = new ArrayList<>();
+
+        // Eagerly load role names to avoid LazyInitializationException
+        for (UserRole userRole : user.getRoles()) {
+            try {
+                // Access the role name within the transaction
+                String roleName = userRole.getRole().getName();
+                authorities.add(new SimpleGrantedAuthority(roleName));
+            } catch (Exception e) {
+                System.err.println("Error loading role: " + e.getMessage());
+                // Default to ROLE_USER if there's an issue loading the role
+                authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+            }
+        }
+
+        // Ensure there's at least one authority
+        if (authorities.isEmpty()) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        }
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
