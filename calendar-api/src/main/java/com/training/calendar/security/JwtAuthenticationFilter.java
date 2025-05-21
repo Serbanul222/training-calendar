@@ -1,6 +1,5 @@
 package com.training.calendar.security;
 
-import com.training.calendar.service.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,13 +13,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
-    private final UserService userService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -31,9 +30,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             if (tokenProvider.validateToken(token)) {
                 String username = tokenProvider.getUsername(token);
-                UserDetails userDetails = userService.loadUserByUsername(username);
+
+                // Get authorities directly from token
+                var authorities = tokenProvider.getAuthorities(token);
+
+                // Log for debugging
+                System.out.println("Authenticating user: " + username);
+                System.out.println("With authorities: " + authorities);
+
+                // Create authentication with authorities
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
+                        username, null, authorities);
+
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
