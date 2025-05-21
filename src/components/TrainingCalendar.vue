@@ -1,14 +1,12 @@
 <template>
   <div class="training-calendar">
-    <!-- Calendar Header with navigation and admin toggle -->
+    <!-- Calendar Header with navigation -->
     <CalendarHeader
       :months="MONTHS"
       :current-year="currentYear"
       :selected-month="selectedMonth"
-      :is-admin="isAdmin"
       @update:month="selectedMonth = $event"
       @update:year="currentYear = $event"
-      @update:is-admin="updateAdminMode"
     />
 
     <!-- View Type Selector -->
@@ -87,6 +85,7 @@ import CalendarViewSwitcher from './CalendarViewSwitcher.vue';
 import useCalendarEvents from '../composables/useCalendarEvents';
 import useCalendarNavigation from '../composables/useCalendarNavigation';
 import { markRaw } from 'vue';
+import { isAdmin as checkIsAdmin } from '../utils/auth';
 
 // Setup calendar and plugins
 const fullCalendar = ref(null);
@@ -117,8 +116,8 @@ const eventStore = useEventStore();
 const categoriesMap = eventStore.categories;
 const categories = computed(() => Object.values(categoriesMap));
 
-// Admin state
-const isAdmin = ref(localStorage.getItem('isAdmin') === 'true' || false);
+// Admin state derived from JWT roles
+const isAdmin = computed(() => checkIsAdmin());
 
 // Modal states
 const showEventForm = ref(false);
@@ -280,6 +279,10 @@ watch(currentView, async () => {
   await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
   forceCalendarRefresh();
 });
+// Adjust calendar options when admin status changes
+watch(isAdmin, (value) => {
+  updateCalendarEditableOptions(fullCalendar, value);
+});
 
 // Watch month/year changes
 watch([currentYear, selectedMonth], async ([newYear, newMonth]) => {
@@ -291,12 +294,7 @@ watch([currentYear, selectedMonth], async ([newYear, newMonth]) => {
   // If `timeGridWeek` spans across month boundaries, this will fetch for the current month.
 });
 
-// Update admin mode
-function updateAdminMode(value) {
-  isAdmin.value = value;
-  localStorage.setItem('isAdmin', value);
-  updateCalendarEditableOptions(fullCalendar, value);
-}
+
 
 // Handle clicking on an event
 function handleEventClick(info) {
@@ -514,6 +512,7 @@ onMounted(async () => {
         console.log('FullCalendar API is available');
         const api = fullCalendar.value.getApi();
         api.changeView(currentView.value);
+        updateCalendarEditableOptions(fullCalendar, isAdmin.value);
         console.log(`Calendar view initialized to: ${currentView.value}`);
       } else {
         console.warn('FullCalendar API not available after mounting');
