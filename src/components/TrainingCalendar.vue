@@ -1,22 +1,13 @@
 <template>
   <div class="training-calendar">
-    <!-- Calendar Header with navigation and admin toggle -->
+    <!-- Calendar Header with navigation -->
     <CalendarHeader
       :months="MONTHS"
       :current-year="currentYear"
       :selected-month="selectedMonth"
-      :is-admin="isAdmin"
       @update:month="selectedMonth = $event"
       @update:year="currentYear = $event"
-      @update:is-admin="updateAdminMode"
     />
-
-    <!-- View Type Selector -->
-    <CalendarViewSwitcher
-      :current-view="currentView"
-      @update:view="setView"
-    />
-
 
     <!-- Loading indicator -->
     <div v-if="loading" class="loading-indicator">Loading calendar data...</div>
@@ -68,74 +59,54 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
 import FullCalendar from '@fullcalendar/vue3';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid'; // Import time grid plugin
-import interactionPlugin from '@fullcalendar/interaction';
+import dayGridPlugin from '@fullcalendar/daygrid';import interactionPlugin from '@fullcalendar/interaction';
 import roLocale from '@fullcalendar/core/locales/ro';
 
 import { MONTHS } from '../constants/months';
 import { useEventStore } from '../store/eventStore';
-
-// Import components
 import CalendarHeader from './CalendarHeader.vue';
 import EventModal from './EventModal.vue';
 import RegistrationModal from './RegistrationModal.vue';
 import ConfirmationModal from './modals/ConfirmationModal.vue';
-import CalendarViewSwitcher from './CalendarViewSwitcher.vue';
-
-// Import composables and utils
 import useCalendarEvents from '../composables/useCalendarEvents';
 import useCalendarNavigation from '../composables/useCalendarNavigation';
 import { markRaw } from 'vue';
-
-// Setup calendar and plugins
+import { isAdmin as checkIsAdmin } from '../utils/auth';
 const fullCalendar = ref(null);
-// Make sure to import and register all required plugins
 const plugins = markRaw([
   dayGridPlugin,
-  timeGridPlugin,
   interactionPlugin
 ]);
-const currentView = ref('dayGridMonth'); // Default view is month
-
-// Setup composables
 const {
   events, loading, error,
   loadEventsByMonth,
-  loadEventsByDay, // Kept, but note `9nz1zf-codex` branch logic in this file doesn't actively use it for reloads
+  loadEventsByDay,
   deleteEvent, submitEvent,
   registerForEvent
 } = useCalendarEvents();
 
 const {
   currentYear, selectedMonth, selectedDate,
-  handleDatesSet, forceCalendarRefresh,
+  handleDatesSet,
   updateCalendarEditableOptions
 } = useCalendarNavigation(fullCalendar);
 
 const eventStore = useEventStore();
 const categoriesMap = eventStore.categories;
 const categories = computed(() => Object.values(categoriesMap));
-
-// Admin state
-const isAdmin = ref(localStorage.getItem('isAdmin') === 'true' || false);
-
-// Modal states
+const isAdmin = computed(() => checkIsAdmin());
 const showEventForm = ref(false);
 const showRegistrationForm = ref(false);
 const showConfirmationModal = ref(false);
 const isEditMode = ref(false);
-
-// Form data
 const eventForm = reactive({
   id: '',
   name: '',
   category: 'CONSULTANTA',
   location: '',
   date: '',
-  startTime: '09:00', // Default start time
-  endTime: '17:00',   // Default end time
-  maxParticipants: 10,
+  startTime: '09:00',
+  endTime: '17:00',   maxParticipants: 10,
   description: '',
   participants: []
 });
@@ -160,19 +131,13 @@ const confirmationModalConfig = reactive({
     showConfirmationModal.value = false;
   }
 });
-
-// Define the event content renderer
 function defaultEventContentRenderer(eventInfo) {
   try {
     const category = eventInfo.event.extendedProps?.category || '';
     const location = eventInfo.event.extendedProps?.location || '';
     const participants = eventInfo.event.extendedProps?.participants || [];
     const maxParticipants = eventInfo.event.extendedProps?.maxParticipants || 0;
-
-    // Create participant info text
     const participantInfo = `${participants.length}/${maxParticipants}`;
-
-    // Build HTML for the event, with appropriate classes for the category
     return {
       html: `
         <div class="fc-event-main-content ${category}">
@@ -184,22 +149,18 @@ function defaultEventContentRenderer(eventInfo) {
     };
   } catch (error) {
     console.error('Error rendering event content:', error);
-    // Fallback rendering
     return {
       html: `<div class="fc-event-main-content"><div class="fc-event-title">${eventInfo.event.title}</div></div>`
     };
   }
 }
-
-// Calendar options
 const calendarOptions = computed(() => {
-  // Start with a clean options object
   return {
     plugins,
-    initialView: 'dayGridMonth', // Always start with month view for stability
+    initialView: 'dayGridMonth',
     locale: roLocale,
-    firstDay: 1, // Monday
-    headerToolbar: false, // We'll create our own header
+    firstDay: 1,
+    headerToolbar: false,
     events,
     selectable: isAdmin.value,
     editable: isAdmin.value,
@@ -207,98 +168,26 @@ const calendarOptions = computed(() => {
     dateClick: handleDateClick,
     eventContent: defaultEventContentRenderer,
     datesSet: handleDatesSet,
-    height: 'auto', // Dynamically adjust height based on content
-    displayEventEnd: false, // Since all events are all-day by default
-    dayMaxEventRows: true, // Better performance for event display
+    height: 'auto',
+    displayEventEnd: false,
+    dayMaxEventRows: true,
     initialDate: new Date(currentYear.value, selectedMonth.value, 1),
-
-    // Time grid specific options
-    slotMinTime: '08:00:00',
-    slotMaxTime: '20:00:00',
-    slotDuration: '00:30:00',
-    allDaySlot: true,
-
-    // Configure each view specifically
     views: {
       dayGridMonth: {
-        // Month view configuration
         dayMaxEventRows: 4
-      },
-      timeGridWeek: {
-        // Week view configuration
-        slotLabelFormat: {
-          hour: 'numeric',
-          minute: '2-digit',
-          omitZeroMinute: false,
-          hour12: false
-        }
-      },
-      /* timeGridDay view removed */
-    }
+      },    }
   };
 });
 
-// Set the calendar view type
-function setView(viewType) {
-  // Update the view state
-  currentView.value = viewType;
-
-  // Safely access the calendar API with proper error handling
-  try {
-    if (fullCalendar.value && fullCalendar.value.getApi) {
-      // Get the API
-      const api = fullCalendar.value.getApi();
-
-      // Make sure the view type exists and is properly registered
-      const availableViews = ['dayGridMonth', 'timeGridWeek'];
-
-      if (availableViews.includes(viewType)) {
-        console.log(`Changing view to: ${viewType}`);
-        // Use a timeout to ensure the view change happens after the current rendering cycle
-        setTimeout(() => {
-          api.changeView(viewType);
-          console.log(`View successfully changed to: ${viewType}`);
-        }, 0);
-      } else {
-        console.warn(`Invalid view type: ${viewType}`);
-      }
-    } else {
-      console.warn('FullCalendar component not fully mounted yet');
-    }
-  } catch (error) {
-    console.error('Error changing calendar view:', error);
-  }
-}
-
-// Watch for view changes to load appropriate data
-watch(currentView, async () => {
-  // Prioritizing 9nz1zf-codex logic: always load by month when view changes.
-  // The `selectedMonth.value` here is 0-indexed.
-  // `loadEventsByMonth` might expect 1-indexed. This needs to be consistent.
-  // Given `onMounted` and `watch([currentYear, selectedMonth]` use `+1`,
-  // it's likely `loadEventsByMonth` expects 1-indexed.
-  await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
-  forceCalendarRefresh();
-});
-
-// Watch month/year changes
-watch([currentYear, selectedMonth], async ([newYear, newMonth]) => {
-  console.log(`Month/year changed to ${newMonth + 1}/${newYear}`); // newMonth is 0-indexed
-  // Assuming loadEventsByMonth expects 1-indexed month
-  await loadEventsByMonth(newYear, newMonth + 1);
-  // No need to restrict to `currentView.value === 'dayGridMonth'`
-  // as month/year change should reload data for any view that is month-based.
-  // If `timeGridWeek` spans across month boundaries, this will fetch for the current month.
-});
-
-// Update admin mode
-function updateAdminMode(value) {
-  isAdmin.value = value;
-  localStorage.setItem('isAdmin', value);
+watch(isAdmin, (value) => {
   updateCalendarEditableOptions(fullCalendar, value);
-}
+});
+watch([currentYear, selectedMonth], async ([newYear, newMonth]) => {
+  console.log(`Month/year changed to ${newMonth + 1}/${newYear}`);
 
-// Handle clicking on an event
+  await loadEventsByMonth(newYear, newMonth + 1);
+
+});
 function handleEventClick(info) {
   const startDate = info.event.start ? new Date(info.event.start) : new Date();
   const startTime = info.event.start ? new Date(info.event.start).toTimeString().substring(0, 5) : '09:00';
@@ -307,7 +196,7 @@ function handleEventClick(info) {
   const eventData = {
     id: info.event.id,
     title: info.event.title,
-    start: startDate.toISOString().split('T')[0], // This is 'date' for the form
+    start: startDate.toISOString().split('T')[0],
     end: info.event.end ? new Date(info.event.end).toISOString().split('T')[0] : startDate.toISOString().split('T')[0],
     extendedProps: {
       category: info.event.extendedProps?.category || '',
@@ -317,12 +206,11 @@ function handleEventClick(info) {
       participants: info.event.extendedProps?.participants ? [...info.event.extendedProps.participants] : [],
       startTime: info.event.extendedProps?.startTime || startTime,
       endTime: info.event.extendedProps?.endTime || endTime,
-      name: info.event.extendedProps?.name || info.event.title.split(' - ')[0] // Attempt to get name
+      name: info.event.extendedProps?.name || info.event.title.split(' - ')[0]
     }
   };
 
   if (isAdmin.value) {
-    // Show edit/delete confirmation
     showConfirmationModal.value = true;
     confirmationModalConfig.title = 'Event Options';
     confirmationModalConfig.message = 'Do you want to edit this event?';
@@ -332,46 +220,26 @@ function handleEventClick(info) {
     confirmationModalConfig.showCancelButton = true;
     confirmationModalConfig.onConfirm = () => {
       showConfirmationModal.value = false;
-      prepareEditEvent(eventData); // Pass eventData, not info
+      prepareEditEvent(eventData);
     };
     confirmationModalConfig.onCancel = () => {
       showConfirmationModal.value = false;
       confirmDeleteEvent(eventData.id);
     };
   } else {
-    // User mode - register for the event
     Object.assign(selectedEventSnapshot, eventData);
     showRegistrationForm.value = true;
   }
 }
-
-// Handle clicking on a date
 function handleDateClick(info) {
   if (!isAdmin.value) return;
 
   isEditMode.value = false;
   const dateOnly = info.dateStr.split('T')[0];
   selectedDate.value = dateOnly;
-  // Removed extra newline from unstable-code
 
-  // Get time information if available
   let startTimeVal = '09:00';
   let endTimeVal = '17:00';
-
-  if (info.view.type.includes('timeGrid') && info.date) {
-    const clickedDate = new Date(info.date);
-    const hours = clickedDate.getHours().toString().padStart(2, '0');
-    const minutes = (Math.floor(clickedDate.getMinutes() / 15) * 15).toString().padStart(2, '0'); // Snap to 15 min
-    startTimeVal = `${hours}:${minutes}`;
-
-    // Calculate end time 1 hour later (as per 9nz1zf-codex structure for this block)
-    // Though `unstable-code` had the calculation for endDate, the assignment structure of `9nz1zf-codex` is preferred.
-    // So we reconstruct the end time based on 9nz1zf-codex logic.
-    const endHour = (clickedDate.getHours() + 1) % 24;
-    endTimeVal = `${endHour.toString().padStart(2, '0')}:${minutes}`; // end time based on 9nz1zf-codex
-  }
-  // The Object.assign for eventForm is the same for both branches after the if/else,
-  // so only one is needed. The specific `startTime` and `endTime` values are determined above.
 
   Object.assign(eventForm, {
     id: '',
@@ -382,30 +250,24 @@ function handleDateClick(info) {
     description: '',
     participants: [],
     date: dateOnly,
-    startTime: startTimeVal, // Use determined startTimeVal
-    endTime: endTimeVal    // Use determined endTimeVal
+    startTime: startTimeVal,
+    endTime: endTimeVal
   });
 
   showEventForm.value = true;
 }
-
-// Prepare edit event
-function prepareEditEvent(eventData) { // Removed 'info' as it's not used here
+function prepareEditEvent(eventData) {
   isEditMode.value = true;
-
-  // The 'date' for the form should come from eventData.start (which is already date-only string)
   const dateOnly = eventData.start;
 
   Object.assign(eventForm, {
     id: eventData.id,
-    // Preferring 9nz1zf-codex: `name: eventData.extendedProps.name || '',`
     name: eventData.extendedProps.name || '',
     category: eventData.extendedProps.category,
     location: eventData.extendedProps.location,
     maxParticipants: eventData.extendedProps.maxParticipants,
     description: eventData.extendedProps.description,
-    // Preferring 9nz1zf-codex: `participants: eventData.extendedProps.participants,` (direct assignment)
-    // If participants can be undefined, a fallback is good:
+
     participants: eventData.extendedProps.participants || [],
     date: dateOnly,
     startTime: eventData.extendedProps.startTime,
@@ -414,8 +276,6 @@ function prepareEditEvent(eventData) { // Removed 'info' as it's not used here
 
   showEventForm.value = true;
 }
-
-// Confirm delete event
 function confirmDeleteEvent(eventId) {
   console.log('Confirming deletion of event:', eventId);
   showConfirmationModal.value = true;
@@ -432,7 +292,6 @@ function confirmDeleteEvent(eventId) {
 
     if (success) {
       console.log('Event deleted, reloading calendar data');
-      // Reload appropriate data based on current view, using 1-indexed month
       await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
     }
   };
@@ -440,19 +299,14 @@ function confirmDeleteEvent(eventId) {
     showConfirmationModal.value = false;
   };
 }
-
-// Handle event submit
-async function handleEventSubmit(submittedFormData) { // Renamed param to avoid confusion
+async function handleEventSubmit(submittedFormData) {
   const success = await submitEvent(submittedFormData, isEditMode.value);
   if (success) {
     closeEventForm();
-    // Reload appropriate data, using 1-indexed month
     await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
   }
 }
-
-// Handle registration submit
-async function handleRegistrationSubmit(submittedFormData) { // Renamed param
+async function handleRegistrationSubmit(submittedFormData) {
   const result = await registerForEvent(submittedFormData);
 
   showConfirmationModal.value = true;
@@ -465,13 +319,10 @@ async function handleRegistrationSubmit(submittedFormData) { // Renamed param
     showConfirmationModal.value = false;
     if (result.success) {
       closeRegistrationForm();
-      // Reload appropriate data, using 1-indexed month
       await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
     }
   };
 }
-
-// Close modals
 function closeEventForm() {
   showEventForm.value = false;
   Object.assign(eventForm, {
@@ -479,7 +330,6 @@ function closeEventForm() {
     name: '',
     category: 'CONSULTANTA',
     location: '',
-    // Preferring 9nz1zf-codex structure for these properties
     maxParticipants: 10,
     description: '',
     participants: [],
@@ -499,22 +349,15 @@ function closeRegistrationForm() {
     extendedProps: {}
   });
 }
-
-// Load events on mount
 onMounted(async () => {
   console.log('TrainingCalendar component mounted');
-
-  // Load initial events, selectedMonth is 0-indexed, loadEventsByMonth expects 1-indexed
   await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
-
-  // Wait a short time to ensure FullCalendar is fully rendered
   setTimeout(() => {
     try {
       if (fullCalendar.value && fullCalendar.value.getApi) {
         console.log('FullCalendar API is available');
         const api = fullCalendar.value.getApi();
-        api.changeView(currentView.value);
-        console.log(`Calendar view initialized to: ${currentView.value}`);
+        updateCalendarEditableOptions(fullCalendar, isAdmin.value);
       } else {
         console.warn('FullCalendar API not available after mounting');
       }
@@ -523,15 +366,11 @@ onMounted(async () => {
     }
   }, 300);
 });
-
-// Set up auto-refresh interval
 const refreshInterval = setInterval(async () => {
   console.log('Periodic events refresh');
-  // Reload appropriate data, using 1-indexed month
   await loadEventsByMonth(currentYear.value, selectedMonth.value + 1);
-}, 60000); // Every 60 seconds
+}, 60000);
 
-// Clean up interval on component unmount
 onUnmounted(() => {
   console.log('Clearing refresh interval');
   clearInterval(refreshInterval);
