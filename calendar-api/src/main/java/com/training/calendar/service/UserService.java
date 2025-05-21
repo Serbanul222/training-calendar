@@ -1,17 +1,18 @@
 package com.training.calendar.service;
 
 import com.training.calendar.model.User;
-import org.springframework.security.core.userdetails.UserDetailsService; // Keep this if UserServiceImpl implements it for Spring Security
+// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+// The import for UserDetailsService is common to both, the comment from unstable-code is not kept.
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.util.Optional;
 
-public interface UserService extends UserDetailsService { // Ensure UserServiceImpl correctly implements loadUserByUsername
-
-    // Updated method signature to include 'name'
-    User registerUser(String email, String name, String password);
-
+// The interface declaration `extends UserDetailsService` is common.
+public interface UserService extends UserDetailsService {
+    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+    // The method signature `registerUser(String email, String password)` is kept.
+    // The version from unstable-code that included `name` is discarded.
+    User registerUser(String email, String password);
     Optional<User> findByEmail(String email);
-
-    // The method 'UserDetails loadUserByUsername(String username)'
-    // is inherited from UserDetailsService and should be implemented by UserServiceImpl.
+    // Comments from unstable-code regarding loadUserByUsername are not kept.
 }

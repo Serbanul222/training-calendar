@@ -1,22 +1,22 @@
 package com.training.calendar.controller;
 
 import com.training.calendar.dto.request.LoginRequest;
-import com.training.calendar.dto.request.RegisterRequest; // Ensure this DTO has a 'name' field
+// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+import com.training.calendar.dto.request.RegisterRequest;
 import com.training.calendar.dto.response.AuthResponse;
-import com.training.calendar.model.User; // Import User model
+// Imports from unstable-code like User model and HttpStatus are removed as per the choice.
 import com.training.calendar.security.JwtTokenProvider;
 import com.training.calendar.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus; // For ResponseEntity
+// HttpStatus import removed from here
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-// import org.springframework.security.core.context.SecurityContextHolder; // If you want to set auth context
+// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map; // For error response
+// Commented out SecurityContextHolder and Map import removed from here
 
 @RestController
 @RequestMapping("/api/auth")
@@ -28,49 +28,21 @@ public class AuthController {
     private final JwtTokenProvider tokenProvider;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        try {
-            // Ensure RegisterRequest DTO has getName(), getEmail(), getPassword()
-            User registeredUser = userService.registerUser(
-                    request.getEmail(),
-                    request.getName(), // <<< PASS THE NAME HERE
-                    request.getPassword()
-            );
-
-            // Option A: Generate token directly after successful registration
-            // The principal for token generation is typically the username/email
-            String token = tokenProvider.generateToken(registeredUser.getEmail());
-            return ResponseEntity.ok(new AuthResponse(token));
-
-            // Option B: Authenticate immediately and then generate token (as you had)
-            // This also serves as a check that the user was created correctly and is authenticatable.
-            /*
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-            );
-            // If you want to set the authentication in the security context for the current request:
-            // SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            String token = tokenProvider.generateToken(authentication.getName()); // or request.getEmail()
-            return ResponseEntity.ok(new AuthResponse(token));
-            */
-
-        } catch (IllegalArgumentException e) {
-            // This will catch "Email already registered" or "Name cannot be empty"
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
-        } catch (Exception e) {
-            // Catch any other unexpected errors during registration or token generation
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "An unexpected error occurred."));
-        }
+    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        userService.registerUser(request.getEmail(), request.getPassword());
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        String token = tokenProvider.generateToken(authentication.getName());
+        return ResponseEntity.ok(new AuthResponse(token));
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        // This part looks fine
+        // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+        // (The functional code was identical, only comments differed, keeping the cleaner version)
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-        // After successful authentication, the principal's name is usually the username (email in your case)
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         String token = tokenProvider.generateToken(authentication.getName());
         return ResponseEntity.ok(new AuthResponse(token));
     }

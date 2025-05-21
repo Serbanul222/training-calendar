@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+import java.util.UUID;
+
 @Entity
 @Table(name = "user_roles")
 @Data
@@ -13,20 +16,22 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserRole {
+    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+    @Id
+    private String id;
 
-    @EmbeddedId // Marks this field as an embedded composite primary key
-    private UserRoleId id;
-
-    @ManyToOne(fetch = FetchType.LAZY) // LAZY is generally better for *-to-one from a join entity
-    @MapsId("userId") // Specifies that 'userId' field of UserRoleId maps to this User association
-    @JoinColumn(name = "user_id") // DB column name
+    @ManyToOne
+    @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("roleId") // Specifies that 'roleId' field of UserRoleId maps to this Role association
-    @JoinColumn(name = "role_id") // DB column name
+    @ManyToOne
+    @JoinColumn(name = "role_id")
     private Role role;
 
-    // The @PrePersist for a separate 'id' is no longer needed
-    // as the ID is now composite and derived from User and Role.
+    @PrePersist
+    public void onPrePersist() {
+        if (id == null) {
+            id = UUID.randomUUID().toString();
+        }
+    }
 }

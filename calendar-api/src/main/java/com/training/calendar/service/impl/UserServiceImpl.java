@@ -3,7 +3,7 @@ package com.training.calendar.service.impl;
 import com.training.calendar.model.Role;
 import com.training.calendar.model.User;
 import com.training.calendar.model.UserRole;
-import com.training.calendar.model.UserRoleId; // Import the composite key class
+// import com.training.calendar.model.UserRoleId; // Removed as it's from unstable-code
 import com.training.calendar.repository.RoleRepository;
 import com.training.calendar.repository.UserRepository;
 import com.training.calendar.repository.UserRoleRepository;
@@ -17,8 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Timestamp;
-import java.time.Instant;
+// import java.sql.Timestamp; // Removed
+// import java.time.Instant; // Removed
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -34,55 +34,30 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public User registerUser(String email, String name, String password) {
-        // CHECK 1: Email already registered?
+    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+    public User registerUser(String email, String password) {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new IllegalArgumentException("Email already registered");
         }
-        // CHECK 2: Name empty?
-        if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Name cannot be empty");
-        }
-
-        // 1. Prepare the User entity
-        User newUser = User.builder()
-                .email(email)
-                .name(name)
-                .password(passwordEncoder.encode(password))
-                .firstLogin(Timestamp.from(Instant.now()))
-                // .lastLogin(Timestamp.from(Instant.now()))
-                .build();
-        // @PrePersist in User.java will set its UUID id
-
-        // 2. Save the User entity
-        User savedUser = userRepository.save(newUser);
-
-        // 3. Find or create the Role
         Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseGet(() -> {
-                    Role newRole = Role.builder().name("ROLE_USER").build();
-                    // Assuming Role.id is Integer and auto-generated (IDENTITY strategy)
-                    return roleRepository.save(newRole);
-                });
+                .orElseGet(() -> roleRepository.save(Role.builder()
+                        .name("ROLE_USER")
+                        .build()));
 
-        // 4. Create the composite ID for UserRole
-        // Potential NullPointerException here if savedUser.getId() or userRole.getId() is null
-        // savedUser.getId() should be populated by @PrePersist before save, or by DB after save if DB generated.
-        // userRole.getId() should be populated by DB after roleRepository.save(newRole).
-        UserRoleId userRoleId = new UserRoleId(savedUser.getId(), userRole.getId());
+        User user = User.builder()
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .build();
+        userRepository.save(user);
 
-        // 5. Create and save the UserRole (join table entry)
-        UserRole userRoleLink = UserRole.builder()
-                .id(userRoleId)
-                .user(savedUser)
+        UserRole ur = UserRole.builder()
+                .user(user)
                 .role(userRole)
                 .build();
-        userRoleRepository.save(userRoleLink);
+        userRoleRepository.save(ur);
+        user.getRoles().add(ur);
 
-        // 6. Add the UserRoleLink to the savedUser's collection
-        savedUser.getRoles().add(userRoleLink);
-
-        return savedUser;
+        return user;
     }
 
     @Override
@@ -93,16 +68,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
-
+                // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         List<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(ur -> new SimpleGrantedAuthority(ur.getRole().getName()))
                 .collect(Collectors.toList());
-
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                authorities
-        );
+                authorities);
     }
 }

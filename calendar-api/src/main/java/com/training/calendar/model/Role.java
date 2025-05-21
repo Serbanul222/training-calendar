@@ -7,16 +7,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "roles") // Ensure your table is named 'roles'
+// Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+@Table(name = "roles")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Role {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // For auto-incrementing integer IDs
+    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(unique = true, nullable = false)
-    private String name; // e.g., "ROLE_USER", "ROLE_ADMIN"
+    // Kept from <<<<<<< ub30iw-codex/implement-user-authentication-and-role-management
+    private String name;
 }

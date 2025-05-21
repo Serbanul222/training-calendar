@@ -11,7 +11,6 @@ public class RegisterRequest {
     private String email;
     @NotBlank
     private String password;
-
-    @NotBlank(message = "Name is required")
-    private String name;
+    // The 'name' field and its validation from 'unstable-code' are removed
+    // because we are keeping the version from 'ub30iw-codex/implement-user-authentication-and-role-management'
 }
